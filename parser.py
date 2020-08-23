@@ -11,6 +11,8 @@ qasm_parser = Lark(
     statement: decl
              | gatedecl goplist "}"
              | gatedecl "}"
+             | opdecl goplist "}"
+             | opdecl "}"
              | OPAQUE id idlist ";"
              | OPAQUE id "(" ")" idlist ";"
              | OPAQUE id "(" idlist ")" idlist ";"
@@ -19,13 +21,19 @@ qasm_parser = Lark(
              | BARRIER anylist ";"
     decl: QREG id "[" nninteger "]" ";"
         | CREG id "[" nninteger "]" ";"
+    opdecl: OPERATOR id idlist "{"
+          | OPERATOR id "(" ")" idlist "{"
+          | OPERATOR id "(" idlist ")" idlist "{"
     gatedecl: GATE id idlist "{"
             | GATE id "(" ")" idlist "{"
             | GATE id "(" idlist ")" idlist "{"
     goplist: uop
+           | term
            | BARRIER idlist ";"
            | goplist uop
+           | goplist term
            | goplist BARRIER idlist ";"
+    term: exp uop
     qop: uop
        | MEASURE argument "->" argument ";"
        | RESET argument ";"
@@ -65,7 +73,6 @@ qasm_parser = Lark(
            | "ln" -> ln
            | "sqrt" -> sqrt
     
-    
     //regexes
     id: /[a-z][A-Za-z0-9_]*/ -> id_
     real: /([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE][-+]?[0-9]+?)?/
@@ -78,6 +85,7 @@ qasm_parser = Lark(
     QREG: "qreg"
     CREG: "creg"
     GATE: "gate"
+    OPERATOR: "operator"
     MEASURE: "measure"
     RESET: "reset"
     U: "U"
@@ -138,6 +146,15 @@ class Gate(Op):
     pass
 
 
+class Term:
+    def __init__(self, coeff, op):
+        self.coeff = coeff
+        self.op = op
+
+    def __str__(self):
+        return "{} {}".format(self.coeff, self.op)
+
+
 class Declaration:
     def __init__(self, name, string, *args, **kwargs):
         self.name = name
@@ -149,7 +166,14 @@ class Declaration:
         return self.string
 
 
-class GateDeclaration(Declaration):
+class QDeclaration(Declaration):
+    pass
+
+
+class GateDeclaration(QDeclaration):
+    pass
+
+class OperatorDeclaration(QDeclaration):
     pass
 
 
@@ -180,9 +204,11 @@ class QASMToStringTransformer(Transformer):
             # <decl>
             decl = args[0]
             s = str(decl)
-            if isinstance(decl, GateDeclaration):
+            if isinstance(decl, QDeclaration):
                 # <gatedecl> <goplist> } or
-                # <gatedecl> }
+                # <gatedecl> } or
+                # <opdecl> <goplist> } or
+                # <opdecl> } or
                 if len(args) == 2:
                     goplist = flatten(args[1])
                     s += "\n"
@@ -224,7 +250,13 @@ class QASMToStringTransformer(Transformer):
         d = Declaration(reg_type, string=s, id_=id_, int_val=int_val)
         return d
 
+    def opdecl(self, *args):
+        return self.qdecl("operator", OperatorDeclaration, *args)
+
     def gatedecl(self, *args):
+        return self.qdecl("gate", GateDeclaration, *args)
+
+    def qdecl(self, keyword, dataclass, *args):
         args = unpack(args)
         decl_name = str(args[0])
         id_ = args[1]
@@ -239,21 +271,22 @@ class QASMToStringTransformer(Transformer):
             # gate <id> ( ) <idlist> {
             kwargs = {"idlist": idlist1}
             idstr = ",".join(idlist1)
-            s = "gate {} {}".format(id_, idstr) + " {"
+            s = "{} {} {}".format(keyword, id_, idstr) + " {"
         else:
             # gate <id> ( <idlist> ) <idlist> {
             kwargs = {"idlist1": idlist1, "idlist2": idlist2}
             idstr1 = ", ".join(idlist1)
             idstr2 = ", ".join(idlist2)
-            s = "gate {} ({}) {}".format(id_, idstr1, idstr2) + " {"
-        d = GateDeclaration(decl_name, string=s, id_=id_, **kwargs)
+            s = "{} {} ({}) {}".format(keyword, id_, idstr1, idstr2) + " {"
+        d = dataclass(decl_name, string=s, id_=id_, **kwargs)
         return d
 
     def goplist(self, *args):
         args = unpack(args)
         if len(args) == 1:
             # <uop>
-            return args[0]
+            # <term>
+            return NamedList('goplist', flatten(args))
         if "barrier" in args:
             if len(args) == 2:
                 # barrier <idlist>;
@@ -268,11 +301,19 @@ class QASMToStringTransformer(Transformer):
                 idlist_str = ",".join(str(x) for x in idlist.list)
                 s = "{} barrier {};".format(goplist_str, idlist_str)
             return s
-        else:
-            # <goplist> <uop>
-            return flatten(args)
+        if isinstance(args[0], NamedList):
+            # <goplist> <uop> or
+            # <goplist> <term>
+            return NamedList('goplist', flatten(args))
 
 
+    def term(self, *args):
+        # <term>
+        args = unpack(args)
+        coeff = args[0]
+        op = args[1]
+        t = Term(coeff, op)
+        return flatten(t)
 
     def qop(self, *args):
         args = unpack(args)

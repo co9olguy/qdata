@@ -145,6 +145,10 @@ class Declaration:
         self.args = args
         self.kwargs = kwargs
 
+    def __str__(self):
+        return self.string
+
+
 class GateDeclaration(Declaration):
     pass
 
@@ -162,7 +166,7 @@ class QASMToStringTransformer(Transformer):
     def mainprogram(self, *args):
         args = unpack(args)
         version, program_str = args
-        header = "OPENQASM {}".format(version)
+        header = "OPENQASM {};".format(version)
         return "\n".join([header, program_str])
 
     def program(self, *args):
@@ -173,28 +177,44 @@ class QASMToStringTransformer(Transformer):
     def statement(self, *args):
         args = unpack(args)
         if isinstance(args[0], Declaration):
+            # <decl>
             decl = args[0]
-            s = decl.string
+            s = str(decl)
             if isinstance(decl, GateDeclaration):
+                # <gatedecl> <goplist> } or
+                # <gatedecl> }
                 if len(args) == 2:
-                    goplist = args[1]
+                    goplist = flatten(args[1])
                     s += "\n"
-                    s += "\n".join("    " + x.string for x in goplist)
+                    s += "\n".join("    " + str(x) for x in goplist)
                 s += "\n}"
-            return s
         elif args[0] == "opaque":
-            # TODO
-            raise Exception
+            # opaque <id> <idlist>; or
+            # opaque <id> () <idlist>; or
+            # opaque <id> (<idlist>) <idlist>;
+            id_ = args[1]
+            s = "opaque {}".format(id_)
+            if len(args) == 4:
+                bracket_idlist = args[2]
+                bracket_idlist_str = ",".join(bracket_idlist.list)
+                bracket_content = "({})".format(bracket_idlist_str)
+                final_idlist = args[3]
+            else:
+                bracket_content = ""
+                final_idlist = args[2]
+            final_idlist_str = ",".join(final_idlist.list)
+            s += "{} {};".format(bracket_content, final_idlist_str)
         elif isinstance(args[0], Op):
-            return args[0]
+            s = str(args[0])
         elif args[0] == "if":
-            # TODO
-            raise Exception
+            # if ( <id> == <nninteger> ) <qop>
+            id_, intval, op = args[1:]
+            s = "if({}=={}) {}".format(id_, intval, op)
         elif args[0] == "barrier":
             # barrier <anylist>;
             barrier_list = ",".join([str(x) for x in flatten(args[1])])
             s = "barrier {};".format(barrier_list)
-            return s
+        return s
 
     def decl(self, *args):
         args = unpack(args)
@@ -218,14 +238,14 @@ class QASMToStringTransformer(Transformer):
             # gate <id> <idlist> { or
             # gate <id> ( ) <idlist> {
             kwargs = {"idlist": idlist1}
-            idstr = ", ".join(idlist1)
+            idstr = ",".join(idlist1)
             s = "gate {} {}".format(id_, idstr) + " {"
         else:
             # gate <id> ( <idlist> ) <idlist> {
             kwargs = {"idlist1": idlist1, "idlist2": idlist2}
             idstr1 = ", ".join(idlist1)
             idstr2 = ", ".join(idlist2)
-            s = "gate {}({}) {} ".format(id_, idstr1, idstr2) + " {"
+            s = "gate {} ({}) {}".format(id_, idstr1, idstr2) + " {"
         d = GateDeclaration(decl_name, string=s, id_=id_, **kwargs)
         return d
 
@@ -234,19 +254,24 @@ class QASMToStringTransformer(Transformer):
         if len(args) == 1:
             # <uop>
             return args[0]
-        else:
-            # <goplist> barrier <idlist>
-            if args[0] == "barrier":
+        if "barrier" in args:
+            if len(args) == 2:
                 # barrier <idlist>;
-                raise Exception
-            goplist = args[0]
-            extra_args = args[1:]
-            if len(extra_args) == 1:
-                # <goplist> <uop>
-                return flatten([goplist, extra_args])
-            elif len(extra_args) == 2:
-                # <goplist> barrier <idlist>
-                raise Exception
+                idlist = args[1]
+                idlist_str = ",".join(str(x) for x in idlist.list)
+                s = "barrier {};".format(idlist_str)
+            else:
+                # <goplist> barrier <idlist>;
+                goplist = args[0]
+                idlist = args[2]
+                goplist_str = ",".join(str(x) for x in goplist.list)
+                idlist_str = ",".join(str(x) for x in idlist.list)
+                s = "{} barrier {};".format(goplist_str, idlist_str)
+            return s
+        else:
+            # <goplist> <uop>
+            return flatten(args)
+
 
 
     def qop(self, *args):
@@ -367,7 +392,11 @@ class QASMToStringTransformer(Transformer):
 
     def negate(self, exp):
         (val,) = exp
-        return - val
+        if isinstance(val, str):
+            negval = "-" + val
+        else:
+            negval = -val
+        return negval
 
     def id_(self, name):
         name = unpack(name)

@@ -178,8 +178,9 @@ class QASMToStringTransformer(Transformer):
             if isinstance(decl, GateDeclaration):
                 if len(args) == 2:
                     goplist = args[1]
-                    s += goplist.string
-                s += "}"
+                    s += "\n"
+                    s += "\n".join("    " + x.string for x in goplist)
+                s += "\n}"
             return s
         elif args[0] == "opaque":
             # TODO
@@ -230,11 +231,23 @@ class QASMToStringTransformer(Transformer):
 
     def goplist(self, *args):
         args = unpack(args)
-        if isinstance(args[0], Op):
+        if len(args) == 1:
             # <uop>
             return args[0]
         else:
-            raise Exception
+            # <goplist> barrier <idlist>
+            if args[0] == "barrier":
+                # barrier <idlist>;
+                raise Exception
+            goplist = args[0]
+            extra_args = args[1:]
+            if len(extra_args) == 1:
+                # <goplist> <uop>
+                return flatten([goplist, extra_args])
+            elif len(extra_args) == 2:
+                # <goplist> barrier <idlist>
+                raise Exception
+
 
     def qop(self, *args):
         args = unpack(args)
@@ -284,7 +297,7 @@ class QASMToStringTransformer(Transformer):
                 params = []
                 wires = flatten(anylist)
                 wires_str = ",".join(str(a) for a in wires)
-                s = "{} {}".format(op_name, wires_str)
+                s = "{} {};".format(op_name, wires_str)
         op = Gate(op_name, params, wires, string=s)
         return op
 
@@ -303,7 +316,9 @@ class QASMToStringTransformer(Transformer):
             # <mixedlist>, <id> or
             # <mixedlist>, <id> [<nninteger>] or
             # <idlist>, <id> [<nninteger>]
-            wires = flatten(format_wires(args[0].list))
+            list_ = args[0]
+            extra_args = format_wires(args[1:])
+            wires = flatten([list_, extra_args])
         else:
             # <id> [<nninteger>]
             wires = [format_wires(args)]

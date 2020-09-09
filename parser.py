@@ -34,6 +34,7 @@ qasm_parser = Lark(
            | goplist term
            | goplist BARRIER idlist ";"
     term: exp uop
+        | "-" uop
     qop: uop
        | MEASURE argument "->" argument ";"
        | RESET argument ";"
@@ -306,12 +307,15 @@ class QASMToStringTransformer(Transformer):
             # <goplist> <term>
             return NamedList('goplist', flatten(args))
 
-
     def term(self, *args):
         # <term>
         args = unpack(args)
-        coeff = args[0]
-        op = args[1]
+        if len(args) == 2:
+            coeff, op = args
+        elif len(args) == 1:
+            # only works because this is the only defined unary op appearing in a term
+            coeff = -1
+            op = args[0]
         t = Term(coeff, op)
         return flatten(t)
 

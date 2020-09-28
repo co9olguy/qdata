@@ -34,18 +34,18 @@ goplist: uop
        | goplist term
        | goplist BARRIER idlist ";"
 
-term: exp uop
+term: expression uop
     | "-" uop
 
 qop: uop
    | MEASURE argument "->" argument ";"
    | RESET argument ";"
 
-uop: U "(" explist ")" argument ";"
+uop: U "(" expressionlist ")" argument ";"
    | CX argument "," argument ";"
    | id anylist ";"
    | id "(" ")" anylist ";"
-   | id "(" explist ")" anylist ";"
+   | id "(" expressionlist ")" anylist ";"
 
 anylist: idlist
        | mixedlist
@@ -61,21 +61,21 @@ mixedlist: id "[" nninteger "]"
 argument: id
         | id "[" nninteger "]"
 
-explist: exp
-       | explist "," exp
+expressionlist: expression
+              | expressionlist "," expression
 
-exp: real
-   | nninteger
-   | PI
-   | id
-   | exp "+" exp -> add
-   | exp "-" exp -> subtract
-   | exp "*" exp -> multiply
-   | exp "/" exp -> divide
-   | "-" exp -> negate
-   | exp "^" exp -> exponentiate
-   | "(" exp ")"
-   | unaryop "(" exp ")"
+expression: real
+          | nninteger
+          | PI
+          | id -> parameter
+          | expression "+" expression -> add
+          | expression "-" expression -> subtract
+          | expression "*" expression -> multiply
+          | expression "/" expression -> divide
+          | "-" expression -> negate
+          | expression "^" expression -> exponentiate
+          | "(" expression ")"
+          | unaryop "(" expression ")"
 
 unaryop: "sin" -> sin
        | "cos" -> cos

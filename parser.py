@@ -1,4 +1,5 @@
 from collections import namedtuple
+import sympy
 
 from numpy import sin, cos, tan, exp, log, sqrt, pi
 from lark import Lark, Transformer
@@ -103,8 +104,14 @@ class QASMToStringTransformer(Transformer):
 
     def mainprogram(self, *args):
         args = unpack(args)
-        version, program_str = args
-        header = "OPENQASM {};".format(version)
+
+        if len(args) == 1:
+            program_str = args[0]
+            header = ""
+        else:
+            version, program_str = args
+            header = "OPENQASM {};".format(version)
+
         return "\n".join([header, program_str])
 
     def program(self, *args):
@@ -268,17 +275,17 @@ class QASMToStringTransformer(Transformer):
             s = "CX {},{};".format(*wires)
         elif op_name == "U":
             # U (<explist>) <argument>;
-            explist, argument = extra_args
-            params = explist.list
+            expressionlist, argument = extra_args
+            params = expressionlist.list
             wires = format_wires(argument.list)
             param_str = ", ".join(str(e) for e in params)
             s = "U({}) {};".format(param_str, wires)
         else:
             # user-defined name
-            if extra_args[0].name == "explist":
-                # <id>(<explist>)<anylist>
-                explist, anylist = extra_args
-                params = explist.list
+            if extra_args[0].name == "expressionlist":
+                # <id>(<expressionlist>)<anylist>
+                expressionlist, anylist = extra_args
+                params = expressionlist.list
                 wires = flatten(anylist)
                 param_str = ",".join(str(e) for e in params)
                 wires_str = ",".join(str(a) for a in wires)
@@ -323,11 +330,11 @@ class QASMToStringTransformer(Transformer):
         # <id>[<nninteger>]
         return NamedList("argument", args)
 
-    def explist(self, *args):
+    def expressionlist(self, *args):
         flat_list = flatten_recursive_list(*args)
-        return NamedList("explist", flat_list)
+        return NamedList("expressionlist", flat_list)
 
-    def exp(self, *args):
+    def expression(self, *args):
         args = unpack(args)
         if len(args) == 1:
             # numbers, ids, or resolved expressions, just need to flatten
@@ -338,28 +345,28 @@ class QASMToStringTransformer(Transformer):
             val = f(x)
         return val
 
-    def add(self, exp):
-        (lterm, rterm) = exp
+    def add(self, expression):
+        (lterm, rterm) = expression
         return lterm + rterm
 
-    def subtract(self, exp):
-        (lterm, rterm) = exp
+    def subtract(self, expression):
+        (lterm, rterm) = expression
         return lterm - rterm
 
-    def multiply(self, exp):
-        (lterm, rterm) = exp
+    def multiply(self, expression):
+        (lterm, rterm) = expression
         return lterm * rterm
 
-    def divide(self, exp):
-        (lterm, rterm) = exp
+    def divide(self, expression):
+        (lterm, rterm) = expression
         return lterm / rterm
 
-    def exponentiate(self, exp):
-        (base, exponent) = exp
+    def exponentiate(self, expression):
+        (base, exponent) = expression
         return base ** exponent
 
-    def negate(self, exp):
-        (val,) = exp
+    def negate(self, expression):
+        (val,) = expression
         if isinstance(val, str):
             negval = "-" + val
         else:
@@ -375,3 +382,6 @@ class QASMToStringTransformer(Transformer):
 
     def nninteger(self, n):
         return int(unpack(n))
+
+    def parameter(self, name):
+        return sympy.Symbol(name[0])

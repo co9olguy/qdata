@@ -4,6 +4,8 @@ include "qelib1.inc";
 qreg q[3];
 creg c[3];
 
+gate p(lambda) q { U(0,0,lambda/2) q; }
+
 // quantum operations
 rx(0.5139579386183292) q[0];
 rx(0.6455803303572194) q[1];

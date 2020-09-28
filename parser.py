@@ -109,6 +109,9 @@ class Op:
         return self.__str__()
 
 
+# TODO: make separate class for classical operations like `measure ...`
+
+
 class Gate(Op):
     pass
 
@@ -135,6 +138,10 @@ class Declaration:
 
     def __repr__(self):
         return self.__str__()
+
+
+# TODO: make separate declaration class for register declarations;
+# distinguish from QDeclarations
 
 
 class QDeclaration(Declaration):
@@ -174,9 +181,13 @@ class QASMToIRTransformer(Transformer):
     def program(self, *args):
         args = flatten_recursive_list(*args)
         program_str = "\n".join(str(x) for x in args)
+        # TODO: convert this function to return data structures as output, not strings
         return program_str
 
     def statement(self, *args):
+        # this function currently receives all necessary information in
+        # an abstract manner, but converts to string
+        # TODO: convert this function to return data structures as output, not strings
         args = unpack(args)
         if isinstance(args[0], Declaration):
             # <decl>
@@ -230,9 +241,8 @@ class QASMToIRTransformer(Transformer):
     def decl(self, *args):
         args = unpack(args)
         reg_type = str(args[0])
-        id_, int_val = args[1:]
-        s = "{} {}[{}];".format(reg_type, id_, int_val)
-        d = Declaration(reg_type, string=s, id_=id_, int_val=int_val)
+        id_, size = args[1:]
+        d = Declaration(reg_type, id_=id_, size=size)
         return d
 
     def opdecl(self, *args):
@@ -346,6 +356,7 @@ class QASMToIRTransformer(Transformer):
                 wires = flatten(anylist)
                 wires_str = ",".join(str(a) for a in wires)
                 s = "{} {};".format(op_name, wires_str)
+        # TODO: move the string definition to the Gate class
         op = Gate(op_name, params, wires, string=s)
         return op
 

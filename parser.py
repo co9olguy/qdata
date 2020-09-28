@@ -308,6 +308,7 @@ class QASMToIRTransformer(Transformer):
         return flatten(t)
 
     def qop(self, *args):
+        # TODO: update this so string construction takes place in Op class
         args = unpack(args)
         if len(args) == 1:
             # <uop>
@@ -330,14 +331,14 @@ class QASMToIRTransformer(Transformer):
             # CX <argument>, <argument>;
             params = []
             wires = [format_wires(x.list) for x in extra_args]
-            s = "CX {},{};".format(*wires)
+            s = "CX {},{}".format(*wires)
         elif op_name == "U":
             # U (<explist>) <argument>;
             explist, argument = extra_args
             params = explist.list
             wires = format_wires(argument.list)
             param_str = ", ".join(str(e) for e in params)
-            s = "U({}) {};".format(param_str, wires)
+            s = "U({}) {}".format(param_str, wires)
         else:
             # user-defined name
             if extra_args[0].name == "explist":
@@ -347,7 +348,7 @@ class QASMToIRTransformer(Transformer):
                 wires = flatten(anylist)
                 param_str = ",".join(str(e) for e in params)
                 wires_str = ",".join(str(a) for a in wires)
-                s = "{}({}) {};".format(op_name, param_str, wires_str)
+                s = "{}({}) {}".format(op_name, param_str, wires_str)
             elif extra_args[0].name == "anylist":
                 # <id><anylist>; or
                 # <id>()<anylist>
@@ -355,7 +356,7 @@ class QASMToIRTransformer(Transformer):
                 params = []
                 wires = flatten(anylist)
                 wires_str = ",".join(str(a) for a in wires)
-                s = "{} {};".format(op_name, wires_str)
+                s = "{} {}".format(op_name, wires_str)
         # TODO: move the string definition to the Gate class
         op = Gate(op_name, params, wires, string=s)
         return op

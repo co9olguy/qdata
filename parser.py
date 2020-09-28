@@ -119,9 +119,6 @@ class QASMToStringTransformer(Transformer):
         program_str = "\n".join(str(x) for x in args)
         return program_str
 
-    def PI(self, *args):
-        return pi
-
     def statement(self, *args):
         args = unpack(args)
         if isinstance(args[0], Declaration):

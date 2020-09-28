@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from numpy import sin, cos, tan, exp, log, sqrt
+from numpy import sin, cos, tan, exp, log, sqrt, pi
 from lark import Lark, Transformer
 
 with open("qasm.lark", "r") as f:
@@ -112,6 +112,9 @@ class QASMToStringTransformer(Transformer):
         program_str = "\n".join(str(x) for x in args)
         return program_str
 
+    def PI(self, *args):
+        return pi
+
     def statement(self, *args):
         args = unpack(args)
         if isinstance(args[0], Declaration):
@@ -154,6 +157,13 @@ class QASMToStringTransformer(Transformer):
             # barrier <anylist>;
             barrier_list = ",".join([str(x) for x in flatten(args[1])])
             s = "barrier {};".format(barrier_list)
+
+        elif args[0] == "include":
+            with open(args[1][1:-1], "r") as f:
+                included_file = "".join(f.readlines())
+
+            tree = qasm_parser.parse(included_file)
+            s = QASMToStringTransformer().transform(tree)
         return s
 
     def decl(self, *args):

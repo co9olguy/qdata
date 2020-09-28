@@ -1,4 +1,4 @@
-mainprogram:  "OPENQASM" real ";" program
+mainprogram:  ("OPENQASM" real ";")* program
 
 ?program: statement
         | program statement
@@ -14,6 +14,7 @@ statement: decl
          | qop
          | IF "(" id "==" nninteger ")" qop
          | BARRIER anylist ";"
+         | INCLUDE ESCAPED_STRING ";"
 
 decl: QREG id "[" nninteger "]" ";"
     | CREG id "[" nninteger "]" ";"
@@ -103,8 +104,11 @@ U: "U"
 CX: "CX"
 PI: "pi"
 
+
+
 // ignores
 COMMENT: "//" /[^\n]/*
+%import common.ESCAPED_STRING
 %import common.WS
 %ignore WS
 %ignore COMMENT

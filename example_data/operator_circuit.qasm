@@ -12,6 +12,9 @@ operator op a,b
   exp(5) y b;
   ln(1) y a;
   sqrt(-1) h a;
+  1.5 + cos(0.0) x a;
+  1.1^ln(3) z a;
+  sin(1.5)^2 + cos(1.5)^2 z b;
   // some comment
   x a; x b;
   -1 x a;

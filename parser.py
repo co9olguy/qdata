@@ -43,7 +43,35 @@ def format_wires(wire_id_list):
 
 
 NamedList = namedtuple("NamedList", ["name", "list"])
-UnaryOp = namedtuple("UnaryOp", ["func", "val"])
+
+class ArithmeticOp:
+
+    def __init__(self, func, *exps):
+        self.tuple = (func, *exps)
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __add__(self, other):
+        return BinaryOp("add", self, other)
+
+    def __radd__(self, other):
+        return BinaryOp("add", other, self)
+
+    def __pow__(self, power):
+        return BinaryOp("pow", self, power)
+
+    def __rpow__(self, power):
+        return BinaryOp("pow", power, self)
+
+class UnaryOp(ArithmeticOp):
+    def __str__(self):
+        return "UnaryOp(func={}, exp={})".format(*self.tuple)
+
+
+class BinaryOp(ArithmeticOp):
+    def __str__(self):
+        return "BinaryOp(func={}, exp1={}, exp2={})".format(*self.tuple)
 
 
 class Op:

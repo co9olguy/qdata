@@ -65,17 +65,17 @@ explist: exp
               | explist "," exp
 
 exp: real
-          | nninteger
-          | PI
-          | id -> parameter
-          | exp "+" exp -> add
-          | exp "-" exp -> subtract
-          | exp "*" exp -> multiply
-          | exp "/" exp -> divide
-          | "-" exp -> negate
-          | exp "^" exp -> binary_exp
-          | "(" exp ")"
-          | unaryop "(" exp ")"
+   | nninteger
+   | PI
+   | id -> parameter
+   | exp "+" exp -> add
+   | exp "-" exp -> subtract
+   | exp "*" exp -> multiply
+   | exp "/" exp -> divide
+   | "-" exp -> negate
+   | exp "^" exp -> binary_exp
+   | "(" exp ")"
+   | unaryop "(" exp ")"
 
 unaryop: "sin" -> sin
        | "cos" -> cos

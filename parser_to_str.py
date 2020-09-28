@@ -272,17 +272,17 @@ class QASMToStringTransformer(Transformer):
             s = "CX {},{};".format(*wires)
         elif op_name == "U":
             # U (<explist>) <argument>;
-            expressionlist, argument = extra_args
-            params = expressionlist.list
+            explist, argument = extra_args
+            params = explist.list
             wires = format_wires(argument.list)
             param_str = ", ".join(str(e) for e in params)
             s = "U({}) {};".format(param_str, wires)
         else:
             # user-defined name
-            if extra_args[0].name == "expressionlist":
-                # <id>(<expressionlist>)<anylist>
-                expressionlist, anylist = extra_args
-                params = expressionlist.list
+            if extra_args[0].name == "explist":
+                # <id>(<explist>)<anylist>
+                explist, anylist = extra_args
+                params = explist.list
                 wires = flatten(anylist)
                 param_str = ",".join(str(e) for e in params)
                 wires_str = ",".join(str(a) for a in wires)
@@ -327,14 +327,14 @@ class QASMToStringTransformer(Transformer):
         # <id>[<nninteger>]
         return NamedList("argument", args)
 
-    def expressionlist(self, *args):
+    def explist(self, *args):
         flat_list = flatten_recursive_list(*args)
-        return NamedList("expressionlist", flat_list)
+        return NamedList("explist", flat_list)
 
-    def expression(self, *args):
+    def exp(self, *args):
         args = unpack(args)
         if len(args) == 1:
-            # numbers, ids, or resolved expressions, just need to flatten
+            # numbers, ids, or resolved exps, just need to flatten
             val = unpack(args)
         elif len(args) == 2:
             # unary ops
@@ -342,28 +342,28 @@ class QASMToStringTransformer(Transformer):
             val = f(x)
         return val
 
-    def add(self, expression):
-        (lterm, rterm) = expression
+    def add(self, exp):
+        (lterm, rterm) = exp
         return lterm + rterm
 
-    def subtract(self, expression):
-        (lterm, rterm) = expression
+    def subtract(self, exp):
+        (lterm, rterm) = exp
         return lterm - rterm
 
-    def multiply(self, expression):
-        (lterm, rterm) = expression
+    def multiply(self, exp):
+        (lterm, rterm) = exp
         return lterm * rterm
 
-    def divide(self, expression):
-        (lterm, rterm) = expression
+    def divide(self, exp):
+        (lterm, rterm) = exp
         return lterm / rterm
 
-    def exponentiate(self, expression):
-        (base, exponent) = expression
+    def exponentiate(self, exp):
+        (base, exponent) = exp
         return base ** exponent
 
-    def negate(self, expression):
-        (val,) = expression
+    def negate(self, exp):
+        (val,) = exp
         if isinstance(val, str):
             negval = "-" + val
         else:

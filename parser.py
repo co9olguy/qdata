@@ -58,6 +58,27 @@ class ArithmeticOp:
     def __radd__(self, other):
         return BinaryOp("add", other, self)
 
+    def __sub__(self, other):
+        return BinaryOp("sub", self, other)
+
+    def __rsub__(self, other):
+        return BinaryOp("sub", other, self)
+
+    def __mul__(self, other):
+        return BinaryOp("mult", self, other)
+
+    def __rmul__(self, other):
+        return BinaryOp("mult", other, self)
+
+    def __truediv__(self, other):
+        return BinaryOp("div", self, other)
+
+    def __rtruediv__(self, other):
+        return BinaryOp("div", other, self)
+
+    def __neg__(self):
+        return UnaryOp("neg", self)
+
     def __pow__(self, power):
         return BinaryOp("pow", self, power)
 
@@ -392,13 +413,7 @@ class QASMToStringTransformer(Transformer):
 
     def negate(self, exp):
         (val,) = exp
-        if isinstance(val, str):
-            negval = "-" + val
-        elif isinstance(val, UnaryOp):
-            negval = UnaryOp("minus", val)
-        else:
-            negval = -val
-        return negval
+        return -val
 
     def id_(self, name):
         name = unpack(name)

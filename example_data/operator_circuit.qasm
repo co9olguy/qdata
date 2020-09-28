@@ -15,6 +15,8 @@ operator op a,b
   1.5 + cos(0.0) x a;
   1.1^ln(3) z a;
   sin(1.5)^2 + cos(1.5)^2 z b;
+  - sqrt(5) - tan(0.1) h b;
+  (8 ^ 2 + sin(3)) h a;
   // some comment
   x a; x b;
   -1 x a;

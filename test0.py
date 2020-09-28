@@ -22,10 +22,9 @@ def eval_pi(pi_str, math_str, num_str):
 
 header_text = "OPENQASM 2.1;"
 examples_path = os.path.join(os.curdir, "qasm_repo_examples")
+examples_path = os.path.join(os.curdir, "example_data")
 for filename in os.listdir(examples_path):
-    if filename == "qelib1.inc":
-        continue
-    if filename != "operator_circuit.qasm":
+    if filename.split(".")[-1] != "qasm":
         continue
     print(filename)
     filepath = os.path.join(examples_path, filename)

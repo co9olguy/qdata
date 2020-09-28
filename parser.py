@@ -1,109 +1,19 @@
 from collections import namedtuple
+import sympy
 
-from numpy import sin, cos, tan, exp, log, sqrt
+from numpy import sin, cos, tan, exp, log, sqrt, pi
 from lark import Lark, Transformer
 
-qasm_parser = Lark(
-    r"""
-    mainprogram:  "OPENQASM" real ";" program
-    ?program: statement 
-            | program statement
-    statement: decl
-             | gatedecl goplist "}"
-             | gatedecl "}"
-             | opdecl goplist "}"
-             | opdecl "}"
-             | OPAQUE id idlist ";"
-             | OPAQUE id "(" ")" idlist ";"
-             | OPAQUE id "(" idlist ")" idlist ";"
-             | qop
-             | IF "(" id "==" nninteger ")" qop
-             | BARRIER anylist ";"
-    decl: QREG id "[" nninteger "]" ";"
-        | CREG id "[" nninteger "]" ";"
-    opdecl: OPERATOR id idlist "{"
-          | OPERATOR id "(" ")" idlist "{"
-          | OPERATOR id "(" idlist ")" idlist "{"
-    gatedecl: GATE id idlist "{"
-            | GATE id "(" ")" idlist "{"
-            | GATE id "(" idlist ")" idlist "{"
-    goplist: uop
-           | term
-           | BARRIER idlist ";"
-           | goplist uop
-           | goplist term
-           | goplist BARRIER idlist ";"
-    term: exp uop
-        | "-" uop
-    qop: uop
-       | MEASURE argument "->" argument ";"
-       | RESET argument ";"
-    uop: U "(" explist ")" argument ";"
-       | CX argument "," argument ";"
-       | id anylist ";"
-       | id "(" ")" anylist ";"
-       | id "(" explist ")" anylist ";"
-    anylist: idlist
-           | mixedlist
-    idlist: id
-          | idlist "," id
-    mixedlist: id "[" nninteger "]"
-             | mixedlist "," id
-             | mixedlist "," id "[" nninteger "]"
-             | idlist "," id "[" nninteger "]"
-    argument: id
-            | id "[" nninteger "]"
-    explist: exp
-           | explist "," exp
-    exp: real
-       | nninteger
-       | PI
-       | id
-       | exp "+" exp -> add
-       | exp "-" exp -> subtract
-       | exp "*" exp -> multiply
-       | exp "/" exp -> divide
-       | "-" exp -> negate
-       | exp "^" exp -> exponentiate
-       | "(" exp ")"
-       | unaryop "(" exp ")"
-    unaryop: "sin" -> sin
-           | "cos" -> cos
-           | "tan" -> tan
-           | "exp" -> exp
-           | "ln" -> ln
-           | "sqrt" -> sqrt
-    
-    //regexes
-    id: /[a-z][A-Za-z0-9_]*/ -> id_
-    real: /([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)([eE][-+]?[0-9]+?)?/
-    nninteger: /[1-9]+[0-9]*|0/
-    
-    //terminals
-    OPAQUE: "opaque"
-    IF: "if"
-    BARRIER: "barrier"
-    QREG: "qreg"
-    CREG: "creg"
-    GATE: "gate"
-    OPERATOR: "operator"
-    MEASURE: "measure"
-    RESET: "reset"
-    U: "U"
-    CX: "CX"
-    PI: "pi"
-    
-    // ignores
-    COMMENT: "//" /[^\n]/*
-    %import common.WS
-    %ignore WS
-    %ignore COMMENT
-    """, start='mainprogram')
+with open("qasm.lark", "r") as f:
+    qasm_grammar = "".join(f.readlines())
+
+qasm_parser = Lark(qasm_grammar, start="mainprogram")
 
 
 def unpack(args):
     (args,) = args
     return args
+
 
 def flatten(obj):
     if isinstance(obj, list):
@@ -116,10 +26,12 @@ def flatten(obj):
     else:
         return [obj]
 
+
 def flatten_recursive_list(*args):
     # flattens nested lists appearing in the AST
     args = unpack(args)
     return flatten(args)
+
 
 def format_wires(wire_id_list):
     if len(wire_id_list) == 1:
@@ -129,7 +41,8 @@ def format_wires(wire_id_list):
         # <id> [<nninteger>]
         return "{}[{}]".format(*wire_id_list)
 
-NamedList = namedtuple('NamedList', ['name', 'list'])
+
+NamedList = namedtuple("NamedList", ["name", "list"])
 
 
 class Op:
@@ -174,6 +87,7 @@ class QDeclaration(Declaration):
 class GateDeclaration(QDeclaration):
     pass
 
+
 class OperatorDeclaration(QDeclaration):
     pass
 
@@ -190,8 +104,14 @@ class QASMToStringTransformer(Transformer):
 
     def mainprogram(self, *args):
         args = unpack(args)
-        version, program_str = args
-        header = "OPENQASM {};".format(version)
+
+        if len(args) == 1:
+            program_str = args[0]
+            header = ""
+        else:
+            version, program_str = args
+            header = "OPENQASM {};".format(version)
+
         return "\n".join([header, program_str])
 
     def program(self, *args):
@@ -241,6 +161,13 @@ class QASMToStringTransformer(Transformer):
             # barrier <anylist>;
             barrier_list = ",".join([str(x) for x in flatten(args[1])])
             s = "barrier {};".format(barrier_list)
+
+        elif args[0] == "include":
+            with open(args[1][1:-1], "r") as f:
+                included_file = "".join(f.readlines())
+
+            tree = qasm_parser.parse(included_file)
+            s = QASMToStringTransformer().transform(tree)
         return s
 
     def decl(self, *args):
@@ -287,7 +214,7 @@ class QASMToStringTransformer(Transformer):
         if len(args) == 1:
             # <uop>
             # <term>
-            return NamedList('goplist', flatten(args))
+            return NamedList("goplist", flatten(args))
         if "barrier" in args:
             if len(args) == 2:
                 # barrier <idlist>;
@@ -305,7 +232,7 @@ class QASMToStringTransformer(Transformer):
         if isinstance(args[0], NamedList):
             # <goplist> <uop> or
             # <goplist> <term>
-            return NamedList('goplist', flatten(args))
+            return NamedList("goplist", flatten(args))
 
     def term(self, *args):
         # <term>
@@ -345,17 +272,17 @@ class QASMToStringTransformer(Transformer):
             s = "CX {},{};".format(*wires)
         elif op_name == "U":
             # U (<explist>) <argument>;
-            explist, argument = extra_args
-            params = explist.list
+            expressionlist, argument = extra_args
+            params = expressionlist.list
             wires = format_wires(argument.list)
             param_str = ", ".join(str(e) for e in params)
             s = "U({}) {};".format(param_str, wires)
         else:
             # user-defined name
-            if extra_args[0].name == "explist":
-                # <id>(<explist>)<anylist>
-                explist, anylist = extra_args
-                params = explist.list
+            if extra_args[0].name == "expressionlist":
+                # <id>(<expressionlist>)<anylist>
+                expressionlist, anylist = extra_args
+                params = expressionlist.list
                 wires = flatten(anylist)
                 param_str = ",".join(str(e) for e in params)
                 wires_str = ",".join(str(a) for a in wires)
@@ -373,12 +300,12 @@ class QASMToStringTransformer(Transformer):
 
     def anylist(self, *args):
         # either <idlist> or <mixedlist>
-        return NamedList('anylist', unpack(args))
+        return NamedList("anylist", unpack(args))
 
     def idlist(self, *args):
         # either <id> or <idlist>, <id>
         flat_list = flatten_recursive_list(*args)
-        return NamedList('idlist', flat_list)
+        return NamedList("idlist", flat_list)
 
     def mixedlist(self, *args):
         args = unpack(args)
@@ -392,19 +319,19 @@ class QASMToStringTransformer(Transformer):
         else:
             # <id> [<nninteger>]
             wires = [format_wires(args)]
-        return NamedList('mixedlist', wires)
+        return NamedList("mixedlist", wires)
 
     def argument(self, *args):
         args = unpack(args)
         # <id> or
         # <id>[<nninteger>]
-        return NamedList('argument', args)
+        return NamedList("argument", args)
 
-    def explist(self, *args):
+    def expressionlist(self, *args):
         flat_list = flatten_recursive_list(*args)
-        return NamedList('explist', flat_list)
+        return NamedList("expressionlist", flat_list)
 
-    def exp(self, *args):
+    def expression(self, *args):
         args = unpack(args)
         if len(args) == 1:
             # numbers, ids, or resolved expressions, just need to flatten
@@ -415,28 +342,28 @@ class QASMToStringTransformer(Transformer):
             val = f(x)
         return val
 
-    def add(self, exp):
-        (lterm, rterm) = exp
+    def add(self, expression):
+        (lterm, rterm) = expression
         return lterm + rterm
 
-    def subtract(self, exp):
-        (lterm, rterm) = exp
+    def subtract(self, expression):
+        (lterm, rterm) = expression
         return lterm - rterm
 
-    def multiply(self, exp):
-        (lterm, rterm) = exp
+    def multiply(self, expression):
+        (lterm, rterm) = expression
         return lterm * rterm
 
-    def divide(self, exp):
-        (lterm, rterm) = exp
+    def divide(self, expression):
+        (lterm, rterm) = expression
         return lterm / rterm
 
-    def exponentiate(self, exp):
-        (base, exponent) = exp
+    def exponentiate(self, expression):
+        (base, exponent) = expression
         return base ** exponent
 
-    def negate(self, exp):
-        (val,) = exp
+    def negate(self, expression):
+        (val,) = expression
         if isinstance(val, str):
             negval = "-" + val
         else:
@@ -452,3 +379,6 @@ class QASMToStringTransformer(Transformer):
 
     def nninteger(self, n):
         return int(unpack(n))
+
+    def parameter(self, name):
+        return sympy.Symbol(name[0])

@@ -104,6 +104,9 @@ class Op:
     def __str__(self):
         return self.string
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class Gate(Op):
     pass
@@ -141,7 +144,7 @@ class OperatorDeclaration(QDeclaration):
     pass
 
 
-class QASMToStringTransformer(Transformer):
+class QASMToIRTransformer(Transformer):
 
     PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"

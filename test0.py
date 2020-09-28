@@ -1,7 +1,7 @@
 import os
 import re
 
-from parser import qasm_parser, QASMToStringTransformer
+from parser import qasm_parser, QASMToIRTransformer
 
 pi = 3.14159
 def eval_pi(pi_str, math_str, num_str):
@@ -35,7 +35,7 @@ for filename in os.listdir(examples_path):
     full_text = "\n".join([header_text, text])
 
     tree = qasm_parser.parse(full_text)
-    text_from_parsed = QASMToStringTransformer().transform(tree)
+    text_from_parsed = QASMToIRTransformer().transform(tree)
     t = text_from_parsed.split(header_text)[1]
     t1 = " ".join(t.split())  # normalize whitespace
 

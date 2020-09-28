@@ -1,7 +1,6 @@
 from collections import namedtuple
 import sympy
 
-from numpy import sin, cos, tan, exp, log, sqrt, pi
 from lark import Lark, Transformer
 
 with open("qasm.lark", "r") as f:
@@ -144,7 +143,7 @@ class OperatorDeclaration(QDeclaration):
 
 class QASMToStringTransformer(Transformer):
 
-    PI = lambda self, _: 3.14159
+    PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"
     cos = lambda self, _: "cos"
     tan = lambda self, _: "tan"

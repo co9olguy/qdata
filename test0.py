@@ -12,12 +12,13 @@ def eval_pi(pi_str, math_str, num_str):
     else:
         if "-" in pi_str:
             val *= -1
-    if "*" in math_str:
-        val *= float(num_str)
-    elif "/" in math_str:
-        val /= float(num_str)
-    else:
-        raise Exception
+    if math_str is not None:
+        if "*" in math_str:
+            val *= float(num_str)
+        elif "/" in math_str:
+            val /= float(num_str)
+        else:
+            raise Exception
     return val
 
 header_text = "OPENQASM 2.1;"

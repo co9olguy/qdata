@@ -84,6 +84,7 @@ class ArithmeticOp:
     def __rpow__(self, power):
         return BinaryOp("pow", power, self)
 
+
 class UnaryOp(ArithmeticOp):
     def __str__(self):
         return "UnaryOp(func={}, exp={})".format(*self.tuple)
@@ -120,16 +121,20 @@ class Term:
     def __str__(self):
         return "{} {}".format(self.coeff, self.op)
 
+    def __repr__(self):
+        return self.__str__()
+
 
 class Declaration:
-    def __init__(self, name, string, *args, **kwargs):
-        self.name = name
-        self.string = string
-        self.args = args
+    def __init__(self, decl_type, **kwargs):
+        self.name = decl_type
         self.kwargs = kwargs
 
     def __str__(self):
-        return self.string
+        return "{} declaration, kwargs={}".format(self.name, self.kwargs)
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class QDeclaration(Declaration):
@@ -231,34 +236,26 @@ class QASMToIRTransformer(Transformer):
         return d
 
     def opdecl(self, *args):
-        return self.qdecl("operator", OperatorDeclaration, *args)
+        return self.qdecl(OperatorDeclaration, *args)
 
     def gatedecl(self, *args):
-        return self.qdecl("gate", GateDeclaration, *args)
+        return self.qdecl(GateDeclaration, *args)
 
-    def qdecl(self, keyword, dataclass, *args):
+    def qdecl(self, dataclass, *args):
         args = unpack(args)
-        decl_name = str(args[0])
+        decl_type = str(args[0])
         id_ = args[1]
         idlist1 = flatten(args[2])
         if len(args) == 4:
-            idlist2 = flatten(args[3])
+            # decl_type <id> ( <idlist> ) <idlist> {
+            param_ids = flatten(args[2])
         else:
-            idlist2 = None
-
-        if not idlist2:
-            # gate <id> <idlist> { or
-            # gate <id> ( ) <idlist> {
-            kwargs = {"idlist": idlist1}
-            idstr = ",".join(idlist1)
-            s = "{} {} {}".format(keyword, id_, idstr) + " {"
-        else:
-            # gate <id> ( <idlist> ) <idlist> {
-            kwargs = {"idlist1": idlist1, "idlist2": idlist2}
-            idstr1 = ", ".join(idlist1)
-            idstr2 = ", ".join(idlist2)
-            s = "{} {} ({}) {}".format(keyword, id_, idstr1, idstr2) + " {"
-        d = dataclass(decl_name, string=s, id_=id_, **kwargs)
+            # decl_type <id> <idlist> { or
+            # decl_type <id> ( ) <idlist> {
+            param_ids = None
+        register_ids = flatten(args[-1])
+        kwargs = {"inputs": param_ids, "registers": register_ids}
+        d = dataclass(decl_type, name=id_, **kwargs)
         return d
 
     def goplist(self, *args):
@@ -268,6 +265,7 @@ class QASMToIRTransformer(Transformer):
             # <term>
             return NamedList("goplist", flatten(args))
         if "barrier" in args:
+            # TODO: update this to return an object, not a string
             if len(args) == 2:
                 # barrier <idlist>;
                 idlist = args[1]
@@ -293,6 +291,7 @@ class QASMToIRTransformer(Transformer):
             coeff, op = args
         elif len(args) == 1:
             # only works because this is the only defined unary op appearing in a term
+            # TODO: check that this still holds
             coeff = -1
             op = args[0]
         t = Term(coeff, op)

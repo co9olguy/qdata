@@ -205,8 +205,6 @@ class QasmProgram:
     def __repr__(self):
         return f"<QasmProgram: version={self.version}>"
 
-    def __str__(self):
-        return str(self.statements)
 
 
 # TODO: make separate declaration class for register declarations;

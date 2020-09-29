@@ -45,11 +45,22 @@ NamedList = namedtuple("NamedList", ["name", "list"])
 
 class ArithmeticOp:
 
+    def __new__(cls, func, *exps):
+        if len(exps) == 1:
+            return super().__new__(UnaryOp)
+
+        if len(exps) == 2:
+            return super().__new__(BinaryOp)
+
+        return super().__new__(cls)
+
     def __init__(self, func, *exps):
+        self.func = func
+        self.args = exps
         self.tuple = (func, *exps)
 
     def __repr__(self):
-        return self.__str__()
+        return "ArithmeticOp(func={}, exps={})".format(self.func, self.args)
 
     def __add__(self, other):
         return BinaryOp("add", self, other)
@@ -86,30 +97,56 @@ class ArithmeticOp:
 
 
 class UnaryOp(ArithmeticOp):
-    def __str__(self):
+    def __init__(self, func, exp):
+        super().__init__(func, exp)
+
+    def __repr__(self):
         return "UnaryOp(func={}, exp={})".format(*self.tuple)
 
 
 class BinaryOp(ArithmeticOp):
-    def __str__(self):
+    def __init__(self, func, exp1, exp2):
+        super().__init__(func, exp1, exp2)
+
+    def __repr__(self):
         return "BinaryOp(func={}, exp1={}, exp2={})".format(*self.tuple)
 
 
 class Op:
-    def __init__(self, name, params, wires, string):
+    def __init__(self, name, params, wires):
         self.name = name
         self.params = params
         self.wires = wires
-        self.string = string
-
-    def __str__(self):
-        return self.string
 
     def __repr__(self):
-        return self.__str__()
+        if self.params:
+            return f"{self.name}({','.join(str(p) for p in self.params)}) {','.join(str(w) for w in self.wires)};"
 
+        return f"{self.name} {','.join(str(w) for w in self.wires)};"
+
+
+class EqualityCondition:
+    def __init__(self, id_, integer):
+        self.id = id_
+        self.integer = integer
+
+    def __repr__(self):
+        return f"{self.id} == {self.integer}"
+
+
+class ConditionalOp(Op):
+    def __init__(self, condition, op):
+        self.condition = condition
+        self.op = op
+
+    def __repr__(self):
+        return f"if ({self.condition}) {self.op}"
 
 # TODO: make separate class for classical operations like `measure ...`
+
+class Barrier(Op):
+    def __init__(self, wires):
+        super.__init__("barrier", params=[], wires=wires)
 
 
 class Gate(Op):
@@ -121,27 +158,74 @@ class Term:
         self.coeff = coeff
         self.op = op
 
-    def __str__(self):
-        return "{} {}".format(self.coeff, self.op)
-
     def __repr__(self):
-        return self.__str__()
+        return "{} {}".format(self.coeff, self.op)
 
 
 class Declaration:
     def __init__(self, decl_type, **kwargs):
         self.name = decl_type
         self.kwargs = kwargs
+        self.opaque = False
+        self.goplist = []
 
-    def __str__(self):
+    def declaration_str(self):
         return "{} declaration, kwargs={}".format(self.name, self.kwargs)
 
     def __repr__(self):
-        return self.__str__()
+        if self.opaque or not self.goplist:
+            return self.declaration_str()
+
+        output = [self.declaration_str(), "{"]
+
+        for op in self.goplist:
+            output.append(f"\t{op}")
+
+        output.append("}")
+        return "\n".join(output)
+
+
+class QasmProgram:
+    def __init__(self, version="2.0", filename=None):
+        self.version = version
+        self.statements = []
+        self.filename = filename
+
+    def serialize(self, insert_includes=False):
+        output = [f"OPENQASM {self.version};"]
+
+        for stmt in self.statements:
+            if isinstance(stmt, QasmProgram) and not insert_includes:
+                output.append(f"include \"{stmt.filename}\";")
+            else:
+                output.append(stmt.__repr__())
+
+        return "\n".join(output)
+
+    def __repr__(self):
+        return f"<QasmProgram: version={self.version}>"
+
 
 
 # TODO: make separate declaration class for register declarations;
 # distinguish from QDeclarations
+
+class ClassicalRegister(Declaration):
+
+    def __init__(self, name, size):
+        super().__init__(decl_type="creg", id_=name, size=size)
+
+    def __repr__(self):
+        return f"creg {self.kwargs['id_']}[{self.kwargs['size']}];"
+
+
+class QuantumRegister(Declaration):
+
+    def __init__(self, name, size):
+        super().__init__(decl_type="qreg", id_=name, size=size)
+
+    def __repr__(self):
+        return f"qreg {self.kwargs['id_']}[{self.kwargs['size']}];"
 
 
 class QDeclaration(Declaration):
@@ -149,7 +233,12 @@ class QDeclaration(Declaration):
 
 
 class GateDeclaration(QDeclaration):
-    pass
+
+    def __init__(self, op):
+        super().__init__(decl_type="gate", op=op)
+
+    def declaration_str(self):
+        return f"gate {self.kwargs['op']}"[:-1]
 
 
 class OperatorDeclaration(QDeclaration):
@@ -166,96 +255,110 @@ class QASMToIRTransformer(Transformer):
     ln = lambda self, _: "log"
     sqrt = lambda self, _: "sqrt"
 
+    def __init__(self, *args, **kwargs):
+        self._program = QasmProgram()
+        super().__init__(self, *args, **kwargs)
+
     def mainprogram(self, *args):
         args = unpack(args)
 
-        if len(args) == 1:
-            program_str = args[0]
-            header = ""
-        else:
-            version, program_str = args
-            header = "OPENQASM {};".format(version)
+        if len(args) > 1:
+            version = args[0]
+            self._program.version = version
 
-        return "\n".join([header, program_str])
+        return self._program
 
     def program(self, *args):
-        args = flatten_recursive_list(*args)
-        program_str = "\n".join(str(x) for x in args)
-        # TODO: convert this function to return data structures as output, not strings
-        return program_str
+        return None
+        # args = flatten_recursive_list(*args)
+        # program_str = "\n".join(str(x) for x in args)
+        # # TODO: convert this function to return data structures as output, not strings
+        # return program_str
 
     def statement(self, *args):
         # this function currently receives all necessary information in
         # an abstract manner, but converts to string
         # TODO: convert this function to return data structures as output, not strings
         args = unpack(args)
+
         if isinstance(args[0], Declaration):
             # <decl>
             decl = args[0]
-            s = str(decl)
+
             if isinstance(decl, QDeclaration):
                 # <gatedecl> <goplist> } or
                 # <gatedecl> } or
                 # <opdecl> <goplist> } or
                 # <opdecl> } or
                 if len(args) == 2:
-                    goplist = flatten(args[1])
-                    s += "\n"
-                    s += "\n".join("    " + str(x) for x in goplist)
-                s += "\n}"
+                    decl.goplist = args[1].list
+
+            stmt = decl
+
         elif args[0] == "opaque":
             # opaque <id> <idlist>; or
             # opaque <id> () <idlist>; or
             # opaque <id> (<idlist>) <idlist>;
-            id_ = args[1]
-            s = "opaque {}".format(id_)
-            if len(args) == 4:
-                bracket_idlist = args[2]
-                bracket_idlist_str = ",".join(bracket_idlist.list)
-                bracket_content = "({})".format(bracket_idlist_str)
-                final_idlist = args[3]
-            else:
-                bracket_content = ""
-                final_idlist = args[2]
-            final_idlist_str = ",".join(final_idlist.list)
-            s += "{} {};".format(bracket_content, final_idlist_str)
+            decl = self.qdecl(QDeclaration, *args[1:])
+            decl.opaque = True
+            stmt = decl
+
         elif isinstance(args[0], Op):
-            s = str(args[0])
+            stmt = args[0]
+
         elif args[0] == "if":
             # if ( <id> == <nninteger> ) <qop>
             id_, intval, op = args[1:]
-            s = "if({}=={}) {}".format(id_, intval, op)
+            cond = EqualityCondition(id_, intval)
+            stmt = ConditionalOp(cond, op)
+
         elif args[0] == "barrier":
             # barrier <anylist>;
-            barrier_list = ",".join([str(x) for x in flatten(args[1])])
-            s = "barrier {};".format(barrier_list)
+            anylist = args[1]
+            stmt = Barrier(wires=anylist.list)
 
         elif args[0] == "include":
-            with open(args[1][1:-1], "r") as f:
+            filename = args[1][1:-1]
+
+            with open(filename, "r") as f:
                 included_file = "".join(f.readlines())
 
             tree = qasm_parser.parse(included_file)
-            s = QASMToStringTransformer().transform(tree)
-        return s
+            included_program = QASMToIRTransformer().transform(tree)
+            included_program.filename = filename
+
+            stmt = included_program
+
+        self._program.statements.append(stmt)
+        return None
 
     def decl(self, *args):
         args = unpack(args)
         reg_type = str(args[0])
         id_, size = args[1:]
-        d = Declaration(reg_type, id_=id_, size=size)
-        return d
+
+        if reg_type == "creg":
+            return ClassicalRegister(name=id_, size=size)
+
+        elif reg_type == "qreg":
+            return QuantumRegister(name=id_, size=size)
+
+        return Declaration(reg_type, id_=id_, size=size)
 
     def opdecl(self, *args):
         return self.qdecl(OperatorDeclaration, *args)
 
     def gatedecl(self, *args):
-        return self.qdecl(GateDeclaration, *args)
+        args = unpack(args)
+        op = self.uop([*args[1:]])
+        return GateDeclaration(op=op)
 
-    def qdecl(self, dataclass, *args):
+    def qdecl(self, cls, *args):
         args = unpack(args)
         decl_type = str(args[0])
         id_ = args[1]
         idlist1 = flatten(args[2])
+
         if len(args) == 4:
             # decl_type <id> ( <idlist> ) <idlist> {
             param_ids = flatten(args[2])
@@ -263,32 +366,31 @@ class QASMToIRTransformer(Transformer):
             # decl_type <id> <idlist> { or
             # decl_type <id> ( ) <idlist> {
             param_ids = None
+
         register_ids = flatten(args[-1])
-        kwargs = {"inputs": param_ids, "registers": register_ids}
-        d = dataclass(decl_type, name=id_, **kwargs)
-        return d
+        kwargs = {"inputs": param_ids, "wires": register_ids}
+        return cls(decl_type, name=id_, **kwargs)
 
     def goplist(self, *args):
         args = unpack(args)
+
         if len(args) == 1:
             # <uop>
             # <term>
             return NamedList("goplist", flatten(args))
+
         if "barrier" in args:
-            # TODO: update this to return an object, not a string
             if len(args) == 2:
                 # barrier <idlist>;
                 idlist = args[1]
-                idlist_str = ",".join(str(x) for x in idlist.list)
-                s = "barrier {};".format(idlist_str)
-            else:
-                # <goplist> barrier <idlist>;
-                goplist = args[0]
-                idlist = args[2]
-                goplist_str = ",".join(str(x) for x in goplist.list)
-                idlist_str = ",".join(str(x) for x in idlist.list)
-                s = "{} barrier {};".format(goplist_str, idlist_str)
-            return s
+                return Barrier(wires=idlist.list)
+
+            # <goplist> barrier <idlist>;
+            goplist = args[0]
+            idlist = args[2]
+            barrier = Barrier(wires=idlist.list)
+            return NamedList("goplist", goplist.list + [barrier])
+
         if isinstance(args[0], NamedList):
             # <goplist> <uop> or
             # <goplist> <term>
@@ -297,6 +399,7 @@ class QASMToIRTransformer(Transformer):
     def term(self, *args):
         # <term>
         args = unpack(args)
+
         if len(args) == 2:
             coeff, op = args
         elif len(args) == 1:
@@ -304,62 +407,62 @@ class QASMToIRTransformer(Transformer):
             # TODO: check that this still holds
             coeff = -1
             op = args[0]
+
         t = Term(coeff, op)
         return flatten(t)
 
     def qop(self, *args):
-        # TODO: update this so string construction takes place in Op class
         args = unpack(args)
+
         if len(args) == 1:
             # <uop>
             return args[0]
-        elif args[0] == "reset":
+
+        if args[0] == "reset":
             # reset <argument>;
-            wires = format_wires(args[1].list)
-            s = "reset {};".format(wires)
+            wires = args[1].list
         elif args[0] == "measure":
-            wires = [format_wires(x.list) for x in args[1:]]
-            s = "measure {} -> {};".format(*wires)
-        op = Op(name=args[0], params=[], wires=wires, string=s)
-        return op
+            wires = [x.list for x in args[1:]]
+
+        return Op(name=args[0], params=[], wires=wires)
 
     def uop(self, *args):
         args = unpack(args)
         op_name = str(args[0])
         extra_args = args[1:]
+
         if op_name == "CX":
-            # CX <argument>, <argument>;
             params = []
-            wires = [format_wires(x.list) for x in extra_args]
-            s = "CX {},{}".format(*wires)
+            wires = [x.list for x in extra_args]
+
         elif op_name == "U":
-            # U (<explist>) <argument>;
             explist, argument = extra_args
             params = explist.list
-            wires = format_wires(argument.list)
-            param_str = ", ".join(str(e) for e in params)
-            s = "U({}) {}".format(param_str, wires)
-        else:
-            # user-defined name
-            if extra_args[0].name == "explist":
-                # <id>(<explist>)<anylist>
-                explist, anylist = extra_args
-                params = explist.list
-                wires = flatten(anylist)
-                param_str = ",".join(str(e) for e in params)
-                wires_str = ",".join(str(a) for a in wires)
-                s = "{}({}) {}".format(op_name, param_str, wires_str)
-            elif extra_args[0].name == "anylist":
-                # <id><anylist>; or
-                # <id>()<anylist>
-                anylist = extra_args[0]
+            wires = argument.list
+
+        elif extra_args[0].name == "explist":
+            # gate has parameters
+            explist, anylist = extra_args
+            params = explist.list
+            wires = flatten(anylist)
+
+        elif extra_args[0].name == "anylist":
+            # gate has no parameters; <id><anylist> or <id>()<anylist>
+            anylist = extra_args[0]
+            params = []
+            wires = flatten(anylist)
+
+        elif extra_args[0].name == "idlist":
+            if len(extra_args) == 1:
+                idlist = extra_args[0]
                 params = []
-                wires = flatten(anylist)
-                wires_str = ",".join(str(a) for a in wires)
-                s = "{} {}".format(op_name, wires_str)
-        # TODO: move the string definition to the Gate class
-        op = Gate(op_name, params, wires, string=s)
-        return op
+                wires = flatten(idlist)
+            elif len(extra_args) == 2:
+                idlist1, idlist2 = extra_args
+                params = idlist1.list
+                wires = flatten(idlist2)
+
+        return Gate(op_name, params, wires)
 
     def anylist(self, *args):
         # either <idlist> or <mixedlist>

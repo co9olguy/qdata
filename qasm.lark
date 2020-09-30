@@ -62,7 +62,7 @@ argument: id
         | id "[" nninteger "]"
 
 explist: exp
-              | explist "," exp
+       | explist "," exp
 
 exp: real
    | nninteger

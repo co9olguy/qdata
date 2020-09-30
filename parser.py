@@ -119,7 +119,7 @@ class Op:
         self.wires = wires
 
     def __repr__(self):
-        if self.params:
+        if not all(p is None for p in self.params):
             return f"{self.name}({','.join(str(p) for p in self.params)}) {','.join(str(w) for w in self.wires)};"
 
         return f"{self.name} {','.join(str(w) for w in self.wires)};"
@@ -149,10 +149,6 @@ class Barrier(Op):
         super.__init__("barrier", params=[], wires=wires)
 
 
-class Gate(Op):
-    pass
-
-
 class Term:
     def __init__(self, coeff, op):
         self.coeff = coeff
@@ -179,6 +175,8 @@ class Declaration:
         output = [self.declaration_str(), "{"]
 
         for op in self.goplist:
+            # TODO: improve this so tensor products print like "x a, y b;"
+            # (they are not treated same as goplist)
             output.append(f"\t{op}")
 
         output.append("}")
@@ -276,9 +274,6 @@ class QASMToIRTransformer(Transformer):
         # return program_str
 
     def statement(self, *args):
-        # this function currently receives all necessary information in
-        # an abstract manner, but converts to string
-        # TODO: convert this function to return data structures as output, not strings
         args = unpack(args)
 
         if isinstance(args[0], Declaration):
@@ -330,7 +325,6 @@ class QASMToIRTransformer(Transformer):
             stmt = included_program
 
         self._program.statements.append(stmt)
-        return None
 
     def decl(self, *args):
         args = unpack(args)
@@ -429,10 +423,11 @@ class QASMToIRTransformer(Transformer):
     def uop(self, *args):
         args = unpack(args)
         op_name = str(args[0])
+        other_op = None
         extra_args = args[1:]
 
         if op_name == "CX":
-            params = []
+            params = [None]
             wires = [x.list for x in extra_args]
 
         elif op_name == "U":
@@ -442,34 +437,53 @@ class QASMToIRTransformer(Transformer):
 
         elif extra_args[0].name == "explist":
             # gate has parameters
-            explist, anylist = extra_args
+            # <id>(<explist>) <anylist>;
+            # <id>(<explist>) <anylist>, <uop>
+            explist, anylist = extra_args[:2]
             params = explist.list
             wires = flatten(anylist)
+            if len(extra_args) > 2:
+                other_op = extra_args[2]
 
         elif extra_args[0].name == "anylist":
-            # gate has no parameters; <id><anylist> or <id>()<anylist>
+            # gate has no parameters;
+            # <id><anylist>
+            # <id>()<anylist>
             anylist = extra_args[0]
-            params = []
+            params = [None]
             wires = flatten(anylist)
+            if len(extra_args) > 1:
+                other_op = extra_args[1]
 
-        elif extra_args[0].name == "idlist":
+        if other_op:
+            # <id> <anylist> , <uop>
+            # <id>() <anylist>, <uop>
+            # <id>(<explist>) <anylist>, <uop>
+            params += other_op.params
+            wires += other_op.wires
+            op_name = "".join([op_name, other_op.name])
+
+        if extra_args[0].name == "idlist":
+            # TODO: this case should not occur, according
+            # to the original spec. Determine what is causing it
             if len(extra_args) == 1:
                 idlist = extra_args[0]
-                params = []
+                params = [None]
                 wires = flatten(idlist)
             elif len(extra_args) == 2:
                 idlist1, idlist2 = extra_args
                 params = idlist1.list
                 wires = flatten(idlist2)
 
-        return Gate(op_name, params, wires)
+        return Op(op_name, params, wires)
 
     def anylist(self, *args):
         # either <idlist> or <mixedlist>
         return NamedList("anylist", unpack(args))
 
     def idlist(self, *args):
-        # either <id> or <idlist>, <id>
+        # <id>
+        # <idlist>, <id>
         flat_list = flatten_recursive_list(*args)
         return NamedList("idlist", flat_list)
 

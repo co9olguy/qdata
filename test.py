@@ -1,6 +1,6 @@
 from parser import qasm_parser, QASMToIRTransformer
 
-with open("example_data/molecular_hamiltonians.qasm", "r") as f:
+with open("example_data/operator_circuit.qasm", "r") as f:
     qasm_str = "".join(f.readlines())
 
 tree = qasm_parser.parse(qasm_str)

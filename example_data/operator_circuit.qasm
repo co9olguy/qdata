@@ -2,6 +2,15 @@ OPENQASM 2.1;
 include "qelib1.inc";
 qreg b[2];
 creg ans[2];
+operator zzxz a,b,c,d {
+    z a, z b, x c, z d;
+}
+operator zzxz a,b,c,d {
+    z a, z() b, x(sin(0.5)) c, z d;
+}
+operator w a,b {
+    x a, someparameterizedop(0.5) b;
+}
 operator op a,b
 {
   //0.5 cx a,b; 1.3 cx a,b; // hi

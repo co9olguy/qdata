@@ -46,6 +46,9 @@ uop: U "(" explist ")" argument ";"
    | id anylist ";"
    | id "(" ")" anylist ";"
    | id "(" explist ")" anylist ";"
+   | id anylist "," uop
+   | id "(" ")" anylist "," uop
+   | id "(" explist ")" anylist "," uop
 
 anylist: idlist
        | mixedlist

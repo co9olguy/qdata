@@ -134,7 +134,7 @@ class EqualityCondition:
         return f"{self.id} == {self.integer}"
 
 
-class ConditionalOp(Op):
+class ConditionalOp:
     def __init__(self, condition, op):
         self.condition = condition
         self.op = op

@@ -17,8 +17,7 @@ def test_instantiate_op(capsys, fname):
     tree = parser.QASMToIRTransformer().transform(tree)
     print(tree)
     serialized_tree = tree.serialize().split('\n')
-    qasm_str_clean = parser.clean_qasm_string(qasm_str)
 
-    assert len(qasm_str_clean)==len(serialized_tree)
-    for (s1, s2) in zip(qasm_str_clean, serialized_tree):
+    assert len(qasm_str)==len(serialized_tree)
+    for (s1, s2) in zip(qasm_str, serialized_tree):
         assert s1==s2

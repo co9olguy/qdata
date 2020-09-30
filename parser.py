@@ -146,7 +146,7 @@ class ConditionalOp:
 
 class Barrier(Op):
     def __init__(self, wires):
-        super.__init__("barrier", params=[], wires=wires)
+        super().__init__("barrier", params=[], wires=wires)
 
 
 class Gate(Op):

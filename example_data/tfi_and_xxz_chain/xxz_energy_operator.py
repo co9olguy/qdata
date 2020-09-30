@@ -4,7 +4,7 @@ nspins = 8
 order_parameter = 1.0
 paulisum = []
 qubits = list(str(q) for q in range(nspins))
-boundary_condition = 'closed'
+boundary_condition = 'open'
 
 
 def operator(opname, wires, scalar=None):

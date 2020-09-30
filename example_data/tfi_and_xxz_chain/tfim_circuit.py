@@ -43,9 +43,13 @@ for d in range(depth):
         gate('X', wires=[q1, ], param=symbol_names[d + depth]) for q1 in
         qubits))
 
+from string import ascii_letters
+
 for op in circuit:
     split_op = op.split(':')
     if len(split_op) == 2:
-        print("Operation: {} on wires {}".format(*split_op))
+        # print("Operation: {} on wires {}".format(*split_op))
+        print(f"{split_op[0].lower()} {','.join(str(i) for i in [ascii_letters[int(i)] for i in split_op[1].split(',')])}")
     else:
-        print("Operation: {} on wires {} with param {}".format(*split_op))
+        print(f"{split_op[0].lower()}({split_op[2]}) {','.join(str(i) for i in [ascii_letters[int(i)] for i in split_op[1].split(',')])}")
+        # print("Operation: {} on wires {} with param {}".format(*split_op))

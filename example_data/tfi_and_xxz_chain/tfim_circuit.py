@@ -23,7 +23,7 @@ def gate(opname, wires, param=None):
 # Circuit description
 nspins = 8
 depth = nspins // 2
-boundary_condition = 'closed'
+boundary_condition = 'open'
 
 circuit = []
 qubits = list(str(q) for q in range(nspins))

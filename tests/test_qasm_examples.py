@@ -18,6 +18,11 @@ def test_instantiate_op(capsys, fname):
     print(tree)
     serialized_tree = tree.serialize().split('\n')
 
-    assert len(qasm_str)==len(serialized_tree)
-    for (s1, s2) in zip(qasm_str, serialized_tree):
+    qasm_str_no_comments = []
+    for line in qasm_str:
+        line = line.split("//")[0].strip("\n")
+        if line:
+            qasm_str_no_comments.append(line)
+    assert len(qasm_str_no_comments)==len(serialized_tree)
+    for (s1, s2) in zip(qasm_str_no_comments, serialized_tree):
         assert s1==s2

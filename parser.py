@@ -179,7 +179,7 @@ class Declaration:
         output = [self.declaration_str(), "{"]
 
         for op in self.goplist:
-            output.append(f"\t{op}")
+            output.append(f"    {op}")
 
         output.append("}")
         return "\n".join(output)
@@ -267,13 +267,6 @@ class QASMToIRTransformer(Transformer):
             self._program.version = version
 
         return self._program
-
-    def program(self, *args):
-        return None
-        # args = flatten_recursive_list(*args)
-        # program_str = "\n".join(str(x) for x in args)
-        # # TODO: convert this function to return data structures as output, not strings
-        # return program_str
 
     def statement(self, *args):
         # this function currently receives all necessary information in

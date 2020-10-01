@@ -1,10 +1,7 @@
 OPENQASM 2.1;
 include "qelib1.inc";
 operator zzxz a,b,c,d {
-    z a;
-    z b;
-    x c;
-    z d;
+    z a, z b, x c, z d;
 }
 operator yyxxz a,b,c,d,e {
     y a;

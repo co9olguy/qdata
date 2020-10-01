@@ -179,7 +179,6 @@ class TensorOp:
     def wires(self):
         return self._wires
 
-
     def __repr__(self):
         return ", ".join(str(o).replace(";", "") for o in self.ops) + ";"
 

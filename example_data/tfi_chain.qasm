@@ -2,8 +2,7 @@ OPENQASM 2.1;
 include "qelib1.inc";
 
 operator zz a,b {
-    z a;
-    z b;
+    z a, z b;
 }
 
 operator tfi_energy_operator_open a, b, c, d, e, f, g, h {

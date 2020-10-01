@@ -5,7 +5,7 @@ creg ans[2];
 operator zzxz a,b,c,d {
     z a, z b, x c, z d;
 }
-operator zzxz a,b,c,d {
+operator pzzxz a,b,c,d {
     z a, z() b, x(sin(0.5)) c, z d;
 }
 operator w a,b {

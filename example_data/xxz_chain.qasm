@@ -1,6 +1,15 @@
 OPENQASM 2.1;
 include "qelib1.inc";
 
+operator xx a,b {
+    x a, x b;
+}
+operator yy a,b {
+    y a, y b;
+}
+operator zz a,b {
+    z a, z b;
+}
 
 operator xxz_energy_operator_open a, b, c, d, e, f, g, h {
     zz a,b;

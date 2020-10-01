@@ -4,435 +4,199 @@ operator zzxz a,b,c,d {
     z a, z b, x c, z d;
 }
 operator yyxxz a,b,c,d,e {
-    y a;
-    y b;
-    x c;
-    x d;
-    z e;
+    y a, y b, x c, x d, z e;
 }
 operator xxxxxz a,b,c,d,e,f {
-    x a;
-    x b;
-    x c;
-    x d;
-    x e;
-    z f;
+    x a, x b, x c, x d, x e, z f;
 }
 operator yxyxxx a,b,c,d,e,f {
-    y a;
-    x b;
-    y c;
-    x d;
-    x e;
-    x f;
+    y a, x b, y c, x d, x e, x f;
 }
 operator zxxxxx a,b,c,d,e,f {
-    z a;
-    x b;
-    x c;
-    x d;
-    x e;
-    x f;
+    z a, x b, x c, x d, x e, x f;
 }
 operator zxzzxz a,b,c,d,e,f {
-    z a;
-    x b;
-    z c;
-    z d;
-    x e;
-    z f;
+    z a, x b, z c, z d, x e, z f;
 }
 operator yyyy a,b,c,d {
-    y a;
-    y b;
-    y c;
-    y d;
+    y a, y b, y c, y d;
 }
 operator zzz a,b,c {
-    z a;
-    z b;
-    z c;
+    z a, z b, z c;
 }
 operator xxzzxx a,b,c,d,e,f {
-    x a;
-    x b;
-    z c;
-    z d;
-    x e;
-    x f;
+    x a, x b, z c, z d, x e, x f;
 }
 operator yyx a,b,c {
-    y a;
-    y b;
-    x c;
+    y a, y b, x c;
 }
 operator xx a,b {
-    x a;
-    x b;
+    x a, x b;
 }
 operator xxxx a,b,c,d {
-    x a;
-    x b;
-    x c;
-    x d;
+    x a, x b, x c, x d;
 }
 operator zxxx a,b,c,d {
-    z a;
-    x b;
-    x c;
-    x d;
+    z a, x b, x c, x d;
 }
 operator xxzx a,b,c,d {
-    x a;
-    x b;
-    z c;
-    x d;
+    x a, x b, z c, x d;
 }
 operator zxxzxx a,b,c,d,e,f {
-    z a;
-    x b;
-    x c;
-    z d;
-    x e;
-    x f;
+    z a, x b, x c, z d, x e, x f;
 }
 operator zxxzxz a,b,c,d,e,f {
-    z a;
-    x b;
-    x c;
-    z d;
-    x e;
-    z f;
+    z a, x b, x c, z d, x e, z f;
 }
 operator xxz a,b,c {
-    x a;
-    x b;
-    z c;
+    x a, x b, z c;
 }
 operator zxxz a,b,c,d {
-    z a;
-    x b;
-    x c;
-    z d;
+    z a, x b, x c, z d;
 }
 operator yxyxxz a,b,c,d,e,f {
-    y a;
-    x b;
-    y c;
-    x d;
-    x e;
-    z f;
+    y a, x b, y c, x d, x e, z f;
 }
 operator yxyzxx a,b,c,d,e,f {
-    y a;
-    x b;
-    y c;
-    z d;
-    x e;
-    x f;
+    y a, x b, y c, z d, x e, x f;
 }
 operator yyyxy a,b,c,d,e {
-    y a;
-    y b;
-    y c;
-    x d;
-    y e;
+    y a, y b, y c, x d, y e;
 }
 operator zxxyxy a,b,c,d,e,f {
-    z a;
-    x b;
-    x c;
-    y d;
-    x e;
-    y f;
+    z a, x b, x c, y d, x e, y f;
 }
 operator zzzx a,b,c,d {
-    z a;
-    z b;
-    z c;
-    x d;
+    z a, z b, z c, x d;
 }
 operator zzzz a,b,c,d {
-    z a;
-    z b;
-    z c;
-    z d;
+    z a, z b, z c, z d;
 }
 operator zxz a,b,c {
-    z a;
-    x b;
-    z c;
+    z a, x b, z c;
 }
 operator zxx a,b,c {
-    z a;
-    x b;
-    x c;
+    z a, x b, x c;
 }
 operator yyxxx a,b,c,d,e {
-    y a;
-    y b;
-    x c;
-    x d;
-    x e;
+    y a, y b, x c, x d, x e;
 }
 operator xxxyy a,b,c,d,e {
-    x a;
-    x b;
-    x c;
-    y d;
-    y e;
+    x a, x b, x c, y d, y e;
 }
 operator xxxxxx a,b,c,d,e,f {
-    x a;
-    x b;
-    x c;
-    x d;
-    x e;
-    x f;
+    x a, x b, x c, x d, x e, x f;
 }
 operator zxxxxz a,b,c,d,e,f {
-    z a;
-    x b;
-    x c;
-    x d;
-    x e;
-    z f;
+    z a, x b, x c, x d, x e, z f;
 }
 operator xxzxxz a,b,c,d,e,f {
-    x a;
-    x b;
-    z c;
-    x d;
-    x e;
-    z f;
+    x a, x b, z c, x d, x e, z f;
 }
 operator zxzyy a,b,c,d,e {
-    z a;
-    x b;
-    z c;
-    y d;
-    y e;
+    z a, x b, z c, y d, y e;
 }
 operator zxzx a,b,c,d {
-    z a;
-    x b;
-    z c;
-    x d;
+    z a, x b, z c, x d;
 }
 operator yxyyxy a,b,c,d,e,f {
-    y a;
-    x b;
-    y c;
-    y d;
-    x e;
-    y f;
+    y a, x b, y c, y d, x e, y f;
 }
 operator xxxz a,b,c,d {
-    x a;
-    x b;
-    x c;
-    z d;
+    x a, x b, x c, z d;
 }
 operator xxzzxz a,b,c,d,e,f {
-    x a;
-    x b;
-    z c;
-    z d;
-    x e;
-    z f;
+    x a, x b, z c, z d, x e, z f;
 }
 operator zxzzxx a,b,c,d,e,f {
-    z a;
-    x b;
-    z c;
-    z d;
-    x e;
-    x f;
+    z a, x b, z c, z d, x e, x f;
 }
 operator xxzxxx a,b,c,d,e,f {
-    x a;
-    x b;
-    z c;
-    x d;
-    x e;
-    x f;
+    x a, x b, z c, x d, x e, x f;
 }
 operator zx a,b {
-    z a;
-    x b;
+    z a, x b;
 }
 operator xzxx a,b,c,d {
-    x a;
-    z b;
-    x c;
-    x d;
+    x a, z b, x c, x d;
 }
 operator zxzyxy a,b,c,d,e,f {
-    z a;
-    x b;
-    z c;
-    y d;
-    x e;
-    y f;
+    z a, x b, z c, y d, x e, y f;
 }
 operator xz a,b {
-    x a;
-    z b;
+    x a, z b;
 }
 operator zxzxxz a,b,c,d,e,f {
-    z a;
-    x b;
-    z c;
-    x d;
-    x e;
-    z f;
+    z a, x b, z c, x d, x e, z f;
 }
 operator yxyx a,b,c,d {
-    y a;
-    x b;
-    y c;
-    x d;
+    y a, x b, y c, x d;
 }
 operator xzxz a,b,c,d {
-    x a;
-    z b;
-    x c;
-    z d;
+    x a, z b, x c, z d;
 }
 operator xzx a,b,c {
-    x a;
-    z b;
-    x c;
+    x a, z b, x c;
 }
 operator xyy a,b,c {
-    x a;
-    y b;
-    y c;
+    x a, y b, y c;
 }
 operator zz a,b {
-    z a;
-    z b;
+    z a, z b;
 }
 operator yyzxx a,b,c,d,e {
-    y a;
-    y b;
-    z c;
-    x d;
-    x e;
+    y a, y b, z c, x d, x e;
 }
 operator yxyzxz a,b,c,d,e,f {
-    y a;
-    x b;
-    y c;
-    z d;
-    x e;
-    z f;
+    y a, x b, y c, z d, x e, z f;
 }
 operator yxyyy a,b,c,d,e {
-    y a;
-    x b;
-    y c;
-    y d;
-    y e;
+    y a, x b, y c, y d, y e;
 }
 operator xzzz a,b,c,d {
-    x a;
-    z b;
-    z c;
-    z d;
+    x a, z b, z c, z d;
 }
 operator xxxzxx a,b,c,d,e,f {
-    x a;
-    x b;
-    x c;
-    z d;
-    x e;
-    x f;
+    x a, x b, x c, z d, x e, x f;
 }
 operator xxzyy a,b,c,d,e {
-    x a;
-    x b;
-    z c;
-    y d;
-    y e;
+    x a, x b, z c, y d, y e;
 }
 operator xxxzxz a,b,c,d,e,f {
-    x a;
-    x b;
-    x c;
-    z d;
-    x e;
-    z f;
+    x a, x b, x c, z d, x e, z f;
 }
 operator xyxy a,b,c,d {
-    x a;
-    y b;
-    x c;
-    y d;
+    x a, y b, x c, y d;
 }
 operator xzzx a,b,c,d {
-    x a;
-    z b;
-    z c;
-    x d;
+    x a, z b, z c, x d;
 }
 operator xxxyxy a,b,c,d,e,f {
-    x a;
-    x b;
-    x c;
-    y d;
-    x e;
-    y f;
+    x a, x b, x c, y d, x e, y f;
 }
 operator zxzxxx a,b,c,d,e,f {
-    z a;
-    x b;
-    z c;
-    x d;
-    x e;
-    x f;
+    z a, x b, z c, x d, x e, x f;
 }
 operator yy a,b {
-    y a;
-    y b;
+    y a, y b;
 }
 operator zxxyy a,b,c,d,e {
-    z a;
-    x b;
-    x c;
-    y d;
-    y e;
+    z a, x b, x c, y d, y e;
 }
 operator yyzxz a,b,c,d,e {
-    y a;
-    y b;
-    z c;
-    x d;
-    z e;
+    y a, y b, z c, x d, z e;
 }
 operator zxzz a,b,c,d {
-    z a;
-    x b;
-    z c;
-    z d;
+    z a, x b, z c, z d;
 }
 operator xzz a,b,c {
-    x a;
-    z b;
-    z c;
+    x a, z b, z c;
 }
 operator zzx a,b,c {
-    z a;
-    z b;
-    x c;
+    z a, z b, x c;
 }
 operator xxzyxy a,b,c,d,e,f {
-    x a;
-    x b;
-    z c;
-    y d;
-    x e;
-    y f;
+    x a, x b, z c, y d, x e, y f;
 }
 
 operator h2 a, b {

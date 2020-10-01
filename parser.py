@@ -164,20 +164,21 @@ class ConditionalOp:
 class TensorOp:
     def __init__(self, *ops):
         self.ops = ops
+        self.params = []
+        self.wires = []
+
+        for o in self.ops:
+            self.params.extend(o.params)
+            self.wires.extend(o.wires)
 
     @property
     def params(self):
-        p = []
-        for o in self.ops:
-            p.extend(o.params)
-        return p
+        return self._params
 
     @property
     def wires(self):
-        w = []
-        for o in self.ops:
-            w.extend(o.wires)
-        return w
+        return self._wires
+
 
     def __repr__(self):
         return ", ".join(str(o).replace(";", "") for o in self.ops) + ";"

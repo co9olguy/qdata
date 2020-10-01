@@ -164,8 +164,8 @@ class ConditionalOp:
 class TensorOp:
     def __init__(self, *ops):
         self.ops = ops
-        self.params = []
-        self.wires = []
+        self._params = []
+        self._wires = []
 
         for o in self.ops:
             self.params.extend(o.params)

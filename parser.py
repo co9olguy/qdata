@@ -101,7 +101,10 @@ class UnaryOp(ArithmeticOp):
         super().__init__(func, exp)
 
     def __repr__(self):
-        return "UnaryOp(func={}, exp={})".format(*self.tuple)
+        if self.func == "neg":
+            return "-{}".format(self.args[0])
+
+        return "{}({})".format(*self.tuple)
 
 
 class BinaryOp(ArithmeticOp):
@@ -109,7 +112,22 @@ class BinaryOp(ArithmeticOp):
         super().__init__(func, exp1, exp2)
 
     def __repr__(self):
-        return "BinaryOp(func={}, exp1={}, exp2={})".format(*self.tuple)
+        if self.func == "add":
+            return "{} + {}".format(*self.args)
+
+        if self.func == "sub":
+            return "{} - {}".format(*self.args)
+
+        if self.func == "mult":
+            return "{} * {}".format(*self.args)
+
+        if self.func == "div":
+            return "{} / {}".format(*self.args)
+
+        if self.func == "pow":
+            return "{} ^ {}".format(*self.args)
+
+        return "{}({}, {})".format(*self.tuple)
 
 
 class Op:
@@ -142,7 +160,36 @@ class ConditionalOp:
     def __repr__(self):
         return f"if ({self.condition}) {self.op}"
 
-# TODO: make separate class for classical operations like `measure ...`
+
+class TensorOp:
+    def __init__(self, *ops):
+        self.ops = ops
+
+    @property
+    def params(self):
+        p = []
+        for o in self.ops:
+            p.extend(o.params)
+        return p
+
+    @property
+    def wires(self):
+        w = []
+        for o in self.ops:
+            w.extend(o.wires)
+        return w
+
+    def __repr__(self):
+        return ", ".join(str(o).replace(";", "") for o in self.ops) + ";"
+
+
+class Measure(Op):
+    def __init__(self, wires):
+        super().__init__("measure", params=[], wires=wires)
+
+    def __repr__(self):
+        return f"{self.name} {format_wires(self.wires[0])} -> {format_wires(self.wires[1])};"
+
 
 class Barrier(Op):
     def __init__(self, wires):
@@ -177,7 +224,7 @@ class Declaration:
         for op in self.goplist:
             # TODO: improve this so tensor products print like "x a, y b;"
             # (they are not treated same as goplist)
-            output.append(f"\t{op}")
+            output.append(f"    {op}")
 
         output.append("}")
         return "\n".join(output)
@@ -240,7 +287,11 @@ class GateDeclaration(QDeclaration):
 
 
 class OperatorDeclaration(QDeclaration):
-    pass
+    def __init__(self, op):
+        super().__init__(decl_type="operator", op=op)
+
+    def declaration_str(self):
+        return f"operator {self.kwargs['op']}"[:-1]
 
 
 class QASMToIRTransformer(Transformer):
@@ -265,13 +316,6 @@ class QASMToIRTransformer(Transformer):
             self._program.version = version
 
         return self._program
-
-    def program(self, *args):
-        return None
-        # args = flatten_recursive_list(*args)
-        # program_str = "\n".join(str(x) for x in args)
-        # # TODO: convert this function to return data structures as output, not strings
-        # return program_str
 
     def statement(self, *args):
         args = unpack(args)
@@ -340,7 +384,9 @@ class QASMToIRTransformer(Transformer):
         return Declaration(reg_type, id_=id_, size=size)
 
     def opdecl(self, *args):
-        return self.qdecl(OperatorDeclaration, *args)
+        args = unpack(args)
+        op = self.uop([*args[1:]])
+        return OperatorDeclaration(op=op)
 
     def gatedecl(self, *args):
         args = unpack(args)
@@ -417,6 +463,7 @@ class QASMToIRTransformer(Transformer):
             wires = args[1].list
         elif args[0] == "measure":
             wires = [x.list for x in args[1:]]
+            return Measure(wires=wires)
 
         return Op(name=args[0], params=[], wires=wires)
 
@@ -459,13 +506,14 @@ class QASMToIRTransformer(Transformer):
             # <id> <anylist> , <uop>
             # <id>() <anylist>, <uop>
             # <id>(<explist>) <anylist>, <uop>
-            params += other_op.params
-            wires += other_op.wires
-            op_name = "".join([op_name, other_op.name])
+            op = Op(op_name, params, wires)
+            return TensorOp(op, other_op)
 
         if extra_args[0].name == "idlist":
             # TODO: this case should not occur, according
             # to the original spec. Determine what is causing it
+            # @co9olguy: this is because self.gatedecl calls
+            # this method, and self.gatedecl *can* have idlist.
             if len(extra_args) == 1:
                 idlist = extra_args[0]
                 params = [None]

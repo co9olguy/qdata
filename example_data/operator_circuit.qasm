@@ -35,5 +35,19 @@ operator op a,b
 gate p(lambda) b { U(sin(3.14159),0,lambda/2) b; }
 gate pp(lambda) b { U(sin(pi/2),0,lambda/2) b; }
 gate ppp(lambda, gamma) b { U(sin(pi),gamma^9,lambda/2) b; }
+
+
+rx(0.192503855821187) q[0];
+rx(0.32684939912569166) q[1];
+rx(0.7591596781480794) q[2];
+cx q[0],q[1];
+cx q[1],q[2];
+cx q[2],q[0];
+
+h q[0];
+z q[2];
+s q[2];
+h q[2];
+
 measure b[0] -> ans[0];
 measure b[1] -> ans[1];

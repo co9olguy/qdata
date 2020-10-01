@@ -32,7 +32,7 @@ def test_instantiate_unary_operation(capsys):
     assert captured.out == "UnaryOp(func=func, exp=1)\n"
 
 
-def test_instantiate_unary_operation(capsys):
+def test_instantiate_binary_operation(capsys):
     """Test that instantiating a binary arithmetic operation works
     correctly"""
 

@@ -134,7 +134,7 @@ class EqualityCondition:
         return f"{self.id} == {self.integer}"
 
 
-class ConditionalOp(Op):
+class ConditionalOp:
     def __init__(self, condition, op):
         self.condition = condition
         self.op = op
@@ -146,7 +146,7 @@ class ConditionalOp(Op):
 
 class Barrier(Op):
     def __init__(self, wires):
-        super.__init__("barrier", params=[], wires=wires)
+        super().__init__("barrier", params=[], wires=wires)
 
 
 class Term:

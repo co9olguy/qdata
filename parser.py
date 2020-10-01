@@ -143,6 +143,10 @@ class Op:
         return f"{self.name} {','.join(str(w) for w in self.wires)};"
 
 
+class Gate(Op):
+    pass
+
+
 class EqualityCondition:
     def __init__(self, id_, integer):
         self.id = id_
@@ -523,7 +527,7 @@ class QASMToIRTransformer(Transformer):
                 params = idlist1.list
                 wires = flatten(idlist2)
 
-        return Op(op_name, params, wires)
+        return Gate(op_name, params, wires)
 
     def anylist(self, *args):
         # either <idlist> or <mixedlist>

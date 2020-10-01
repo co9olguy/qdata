@@ -29,7 +29,7 @@ def test_instantiate_unary_operation(capsys):
 
     print(op)
     captured = capsys.readouterr()
-    assert captured.out == "UnaryOp(func=func, exp=1)\n"
+    assert captured.out == "func(1)\n"
 
 
 def test_instantiate_binary_operation(capsys):
@@ -41,7 +41,7 @@ def test_instantiate_binary_operation(capsys):
 
     print(op)
     captured = capsys.readouterr()
-    assert captured.out == "BinaryOp(func=func, exp1=1, exp2=2)\n"
+    assert captured.out == "func(1, 2)\n"
 
 
 arithmetic_arg_data = [

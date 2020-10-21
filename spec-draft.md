@@ -1,7 +1,7 @@
 This format is a fork of OpenQASM, with additions designed to provide more useful features.
 
 Example script:
-
+```
 OPERATORQASM 2.0;
 include "qelib1.inc"; // includes basic gates
 include "qoplib1.inc"; // includes basic operators
@@ -27,3 +27,4 @@ creg c[2];
 
 gate CX q[0], q[1];
 measure MyHamiltonian q -> c; // sample from the eigenstates of this observable
+```

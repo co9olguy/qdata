@@ -9,4 +9,6 @@ Optional features to consider:
 
 * declaring quantum channels in a similar way to quantum gates
 * basic measurement post-processing like expval?
+* remove the unnecessary restrictions on uppercase names
+* support for complex numbers?
 * support for gates & operators to be declared as matrices? (similar to quil)

@@ -12,6 +12,7 @@ qasm_parser = Lark(qasm_grammar, start="mainprogram")
 
 
 class QasmProgram:
+    """Represents a program which follows the updated OPENQASM specification."""
     def __init__(self, version="2.0", filename=None):
         self.version = version
         self.statements = []
@@ -33,7 +34,11 @@ class QasmProgram:
 
 
 class QASMToIRTransformer(Transformer):
+    """Transformer for processing the Lark parse tree.
 
+    Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
+    All method names mirror the corresponding symbols from the grammar.
+    """
     PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"
     cos = lambda self, _: "cos"
@@ -62,7 +67,7 @@ class QASMToIRTransformer(Transformer):
             # <decl>
             decl = args[0]
 
-            if isinstance(decl, QDeclaration):
+            if decl.name in ['gate', 'operator', 'channel']:
                 # <gatedecl> <goplist> } or
                 # <gatedecl> } or
                 # <opdecl> <goplist> } or
@@ -76,8 +81,7 @@ class QASMToIRTransformer(Transformer):
             # opaque <id> <idlist>; or
             # opaque <id> () <idlist>; or
             # opaque <id> (<idlist>) <idlist>;
-            decl = self.qdecl(QDeclaration, *args[1:])
-            decl.opaque = True
+            decl = self.qdecl(Declaration, opaque=True, *args[1:])
             stmt = decl
 
         elif isinstance(args[0], Op):

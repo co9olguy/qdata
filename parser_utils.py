@@ -18,6 +18,15 @@ class Ops(Enum):
     BARRIER = 4
 
 
+class Declarations(Enum):
+    """Enum class for representing various declarations that are allowed by the grammar."""
+    QREG = 0
+    CREG = 1
+    GATE = 2
+    OPERATOR = 3
+    CHANNEL = 4
+
+
 class ParsedList:
     """Bookkeeping class for the various list-like objects encountered while parsing."""
     def __init__(self, name, list_):
@@ -161,52 +170,25 @@ class Op:
 
 
 class Gate(Op):
+    """Class for representing unitary quantum gates."""
     def __init__(self, name, params, wires):
         super().__init__(Ops.GATE, name, params, wires)
 
 
 class Channel(Op):
+    """Class for representing non-unitary quantum channels."""
     def __init__(self, name, params, wires):
         super().__init__(Ops.CHANNEL, name, params, wires)
 
 
 class Operator(Op):
+    """Class for representing quantum operators."""
     def __init__(self, name, params, wires):
         super().__init__(Ops.OPERATOR, name, params, wires)
 
 
-class Measure(Op):
-    def __init__(self, wires):
-        super().__init__(Ops.MEASURE, "measure", params=[], wires=wires)
-
-    def __repr__(self):
-        return f"{self.name} {format_wires(self.wires[0])} -> {format_wires(self.wires[1])};"
-
-
-class Barrier(Op):
-    def __init__(self, wires):
-        super().__init__(Ops.BARRIER, "barrier", params=[], wires=wires)
-
-
-class EqualityCondition:
-    def __init__(self, id_, integer):
-        self.id = id_
-        self.integer = integer
-
-    def __repr__(self):
-        return f"{self.id} == {self.integer}"
-
-
-class ConditionalOp:
-    def __init__(self, condition, op):
-        self.condition = condition
-        self.op = op
-
-    def __repr__(self):
-        return f"if ({self.condition}) {self.op}"
-
-
 class TensorOp:
+    """Class for representing a tensor product of two or more operators."""
     def __init__(self, *ops):
         self.ops = ops
         self._params = []
@@ -229,6 +211,7 @@ class TensorOp:
 
 
 class Term:
+    """Class for representing a term in the expression of an operator as a linear combination of other operators."""
     def __init__(self, coeff, op):
         self.coeff = coeff
         self.op = op
@@ -237,11 +220,53 @@ class Term:
         return "{} {}".format(self.coeff, self.op)
 
 
+class Measure(Op):
+    """Class for representing the 'measure' instruction."""
+    def __init__(self, wires):
+        super().__init__(Ops.MEASURE, "measure", params=[], wires=wires)
+
+    def __repr__(self):
+        return f"{self.name} {format_wires(self.wires[0])} -> {format_wires(self.wires[1])};"
+
+
+class Barrier(Op):
+    """Class for representing the 'barrier' keyword."""
+    def __init__(self, wires):
+        super().__init__(Ops.BARRIER, "barrier", params=[], wires=wires)
+
+
+class EqualityCondition:
+    """Class for representing the classical equality expression from the specification.
+
+    For example, as appears in ``if(c==5) CX q[0],q[1];``.
+    """
+    def __init__(self, id_, integer):
+        self.id = id_
+        self.integer = integer
+
+    def __repr__(self):
+        return f"{self.id} == {self.integer}"
+
+
+class ConditionalOp:
+    """Class for representing the classical conditional expression from the specification.
+
+    For example, as appears in ``barrier q[0],q[1];``."""
+    def __init__(self, condition, op):
+        self.condition = condition
+        self.op = op
+
+    def __repr__(self):
+        return f"if ({self.condition}) {self.op}"
+
+
 class Declaration:
-    def __init__(self, decl_type, **kwargs):
-        self.name = decl_type
+    """Base class for representing the declaration of an object that is supported in the grammar."""
+    def __init__(self, decl_type, opaque=False, **kwargs):
+        self.decl_type = decl_type
+        self.name = decl_type.name.lower()
+        self.opaque = opaque
         self.kwargs = kwargs
-        self.opaque = False
         self.goplist = []
 
     def declaration_str(self):
@@ -262,43 +287,45 @@ class Declaration:
         return "\n".join(output)
 
 
-# TODO: make separate declaration class for register declarations;
-# distinguish from QDeclarations
-
 class ClassicalRegister(Declaration):
+    """Class for representing the declaration of classical registers.
 
+    For example, as in ``creg c[5];``"""
     def __init__(self, name, size):
-        super().__init__(decl_type="creg", id_=name, size=size)
+        super().__init__(decl_type=Declarations.CREG, id_=name, size=size)
 
     def __repr__(self):
         return f"creg {self.kwargs['id_']}[{self.kwargs['size']}];"
 
 
 class QuantumRegister(Declaration):
+    """Class for representing the declaration of quantum registers.
 
+    For example, as in ``qreg q[5];``"""
     def __init__(self, name, size):
-        super().__init__(decl_type="qreg", id_=name, size=size)
+        super().__init__(decl_type=Declarations.QREG, id_=name, size=size)
 
     def __repr__(self):
         return f"qreg {self.kwargs['id_']}[{self.kwargs['size']}];"
 
 
-class QDeclaration(Declaration):
-    pass
+class GateDeclaration(Declaration):
+    """Class for representing the declaration of quantum gates.
 
-
-class GateDeclaration(QDeclaration):
-
+    For example, as in ``gate g a {U(0,0,0) a;}``"""
     def __init__(self, op):
-        super().__init__(decl_type="gate", op=op)
+        super().__init__(decl_type=Declarations.GATE, op=op)
 
     def declaration_str(self):
         return f"gate {self.kwargs['op']}"[:-1]
 
 
-class OperatorDeclaration(QDeclaration):
+class OperatorDeclaration(Declaration):
+    """Class for representing the declaration of quantum gates.
+
+    For example, as in ``operator op a{XX a,b;}``"""
     def __init__(self, op):
-        super().__init__(decl_type="operator", op=op)
+        super().__init__(decl_type=Declarations.OPERATOR, op=op)
 
     def declaration_str(self):
         return f"operator {self.kwargs['op']}"[:-1]

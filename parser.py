@@ -1,4 +1,4 @@
-from collections import namedtuple
+from enum import Enum
 import sympy
 
 from lark import Lark, Transformer
@@ -9,10 +9,27 @@ with open("qasm.lark", "r") as f:
 qasm_parser = Lark(qasm_grammar, start="mainprogram")
 
 
+class Lists(Enum):
+    GOPLIST = 0
+    ANYLIST = 1
+    IDLIST = 2
+    MIXEDLIST = 3
+    EXPLIST = 4
+
+
+class ParsedList:
+    """Bookkeeping class for the various list-like objects encountered while parsing."""
+    def __init__(self, name, list_):
+        self.name = name
+        self.list = list_
+
+    def __repr__(self):
+        return "<{}: {}>".format(self.name, self.list)
+
+
 def unpack(args):
     (args,) = args
     return args
-
 
 def flatten(obj):
     if isinstance(obj, list):
@@ -20,17 +37,15 @@ def flatten(obj):
         for item in obj:
             flat_list.extend(flatten(item))
         return flat_list
-    elif isinstance(obj, NamedList):
+    elif isinstance(obj, ParsedList):
         return flatten(obj.list)
     else:
         return [obj]
-
 
 def flatten_recursive_list(*args):
     # flattens nested lists appearing in the AST
     args = unpack(args)
     return flatten(args)
-
 
 def format_wires(wire_id_list):
     if len(wire_id_list) == 1:
@@ -39,9 +54,6 @@ def format_wires(wire_id_list):
     elif len(wire_id_list) == 2:
         # <id> [<nninteger>]
         return "{}[{}]".format(*wire_id_list)
-
-
-NamedList = namedtuple("NamedList", ["name", "list"])
 
 class ArithmeticOp:
 
@@ -421,7 +433,7 @@ class QASMToIRTransformer(Transformer):
         if len(args) == 1:
             # <uop>
             # <term>
-            return NamedList("goplist", flatten(args))
+            return ParsedList(Lists.GOPLIST, flatten(args))
 
         if "barrier" in args:
             if len(args) == 2:
@@ -433,12 +445,12 @@ class QASMToIRTransformer(Transformer):
             goplist = args[0]
             idlist = args[2]
             barrier = Barrier(wires=idlist.list)
-            return NamedList("goplist", goplist.list + [barrier])
+            return ParsedList(Lists.GOPLIST, goplist.list + [barrier])
 
-        if isinstance(args[0], NamedList):
+        if isinstance(args[0], ParsedList):
             # <goplist> <uop> or
             # <goplist> <term>
-            return NamedList("goplist", flatten(args))
+            return ParsedList(Lists.GOPLIST, flatten(args))
 
     def term(self, *args):
         # <term>
@@ -479,14 +491,16 @@ class QASMToIRTransformer(Transformer):
 
         if op_name == "CX":
             params = [None]
-            wires = [x.list for x in extra_args]
+            wires = flatten(extra_args)
+            return Gate(op_name, params, wires)
 
-        elif op_name == "U":
+        if op_name == "U":
             explist, argument = extra_args
             params = explist.list
-            wires = argument.list
+            wires = argument
+            return Gate(op_name, params, wires)
 
-        elif extra_args[0].name == "explist":
+        if extra_args[0].name == Lists.EXPLIST:
             # gate has parameters
             # <id>(<explist>) <anylist>;
             # <id>(<explist>) <anylist>, <uop>
@@ -496,7 +510,7 @@ class QASMToIRTransformer(Transformer):
             if len(extra_args) > 2:
                 other_op = extra_args[2]
 
-        elif extra_args[0].name == "anylist":
+        elif extra_args[0].name == Lists.ANYLIST:
             # gate has no parameters;
             # <id><anylist>
             # <id>()<anylist>
@@ -513,10 +527,10 @@ class QASMToIRTransformer(Transformer):
             op = Op(op_name, params, wires)
             return TensorOp(op, other_op)
 
-        if extra_args[0].name == "idlist":
+        if extra_args[0].name == Lists.IDLIST:
             # TODO: this case should not occur, according
             # to the original spec. Determine what is causing it
-            # @co9olguy: this is because self.gatedecl calls
+            # @josh146: this is because self.gatedecl calls
             # this method, and self.gatedecl *can* have idlist.
             if len(extra_args) == 1:
                 idlist = extra_args[0]
@@ -531,17 +545,17 @@ class QASMToIRTransformer(Transformer):
 
     def anylist(self, *args):
         # either <idlist> or <mixedlist>
-        return NamedList("anylist", unpack(args))
+        return ParsedList(Lists.ANYLIST, unpack(args))
 
     def idlist(self, *args):
         # <id>
         # <idlist>, <id>
         flat_list = flatten_recursive_list(*args)
-        return NamedList("idlist", flat_list)
+        return ParsedList(Lists.IDLIST, flat_list)
 
     def mixedlist(self, *args):
         args = unpack(args)
-        if isinstance(args[0], NamedList):
+        if isinstance(args[0], ParsedList):
             # <mixedlist>, <id> or
             # <mixedlist>, <id> [<nninteger>] or
             # <idlist>, <id> [<nninteger>]
@@ -551,17 +565,16 @@ class QASMToIRTransformer(Transformer):
         else:
             # <id> [<nninteger>]
             wires = [format_wires(args)]
-        return NamedList("mixedlist", wires)
+        return ParsedList(Lists.MIXEDLIST, wires)
 
     def argument(self, *args):
-        args = unpack(args)
         # <id> or
         # <id>[<nninteger>]
-        return NamedList("argument", args)
+        return unpack(args)
 
     def explist(self, *args):
         flat_list = flatten_recursive_list(*args)
-        return NamedList("explist", flat_list)
+        return ParsedList(Lists.EXPLIST, flat_list)
 
     def exp(self, *args):
         args = unpack(args)

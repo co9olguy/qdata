@@ -28,11 +28,14 @@ class ParsedList:
 
 
 def unpack(args):
+    """Helper function to convert from the format lark gives to a more useful form."""
     (args,) = args
     return args
 
-def flatten(obj):
-    if isinstance(obj, list):
+def flatten(*args):
+    """Flattens nested lists consisting of Python lists or NestedList objects."""
+    obj = unpack(args)
+    if isinstance(obj, (list, tuple)):
         flat_list = []
         for item in obj:
             flat_list.extend(flatten(item))
@@ -41,11 +44,6 @@ def flatten(obj):
         return flatten(obj.list)
     else:
         return [obj]
-
-def flatten_recursive_list(*args):
-    # flattens nested lists appearing in the AST
-    args = unpack(args)
-    return flatten(args)
 
 def format_wires(wire_id_list):
     if len(wire_id_list) == 1:
@@ -550,7 +548,7 @@ class QASMToIRTransformer(Transformer):
     def idlist(self, *args):
         # <id>
         # <idlist>, <id>
-        flat_list = flatten_recursive_list(*args)
+        flat_list = flatten(*args)
         return ParsedList(Lists.IDLIST, flat_list)
 
     def mixedlist(self, *args):
@@ -573,7 +571,7 @@ class QASMToIRTransformer(Transformer):
         return unpack(args)
 
     def explist(self, *args):
-        flat_list = flatten_recursive_list(*args)
+        flat_list = flatten(*args)
         return ParsedList(Lists.EXPLIST, flat_list)
 
     def exp(self, *args):

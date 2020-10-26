@@ -478,7 +478,7 @@ class QASMToIRTransformer(Transformer):
             # reset <argument>;
             wires = args[1].list
         elif args[0] == "measure":
-            wires = [x.list for x in args[1:]]
+            wires = args[1:]
             return Measure(wires=wires)
 
         return Op(name=args[0], params=[], wires=wires)

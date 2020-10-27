@@ -1,36 +1,43 @@
+"""This module contains the QASMToIRTransformer and qasm_parser"""
+import pathlib
 from enum import Enum
-import sympy
 
+import sympy
 from lark import Lark, Transformer
 
-from parser_utils import *
+from .ir import (
+    ArithmeticOperation,
+    Barrier,
+    BinaryOperation,
+    Channel,
+    ClassicalRegister,
+    ConditionalOp,
+    Declaration,
+    Declarations,
+    EqualityCondition,
+    Gate,
+    GateDeclaration,
+    Lists,
+    Measure,
+    Op,
+    Operator,
+    OperatorDeclaration,
+    Ops,
+    ParsedList,
+    QasmProgram,
+    QuantumRegister,
+    TensorOp,
+    Term,
+    UnaryOperation,
+    flatten,
+    format_wires,
+    unpack,
+)
 
-with open("qasm.lark", "r") as f:
+with open(pathlib.Path(__file__).parent / "qasm.lark", "r") as f:
     qasm_grammar = "".join(f.readlines())
 
 qasm_parser = Lark(qasm_grammar, start="mainprogram")
-
-
-class QasmProgram:
-    """Represents a program which follows the updated OPENQASM specification."""
-    def __init__(self, version="2.0", filename=None):
-        self.version = version
-        self.statements = []
-        self.filename = filename
-
-    def serialize(self, insert_includes=False):
-        output = [f"OPENQASM {self.version};"]
-
-        for stmt in self.statements:
-            if isinstance(stmt, QasmProgram) and not insert_includes:
-                output.append(f"include \"{stmt.filename}\";")
-            else:
-                output.append(stmt.__repr__())
-
-        return "\n".join(output)
-
-    def __repr__(self):
-        return f"<QasmProgram: version={self.version}>"
 
 
 class QASMToIRTransformer(Transformer):
@@ -39,6 +46,7 @@ class QASMToIRTransformer(Transformer):
     Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
     All method names mirror the corresponding symbols from the grammar.
     """
+
     PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"
     cos = lambda self, _: "cos"
@@ -67,7 +75,7 @@ class QASMToIRTransformer(Transformer):
             # <decl>
             decl = args[0]
 
-            if decl.name in ['gate', 'operator', 'channel']:
+            if decl.name in ["gate", "operator", "channel"]:
                 # <gatedecl> <goplist> } or
                 # <gatedecl> } or
                 # <opdecl> <goplist> } or
@@ -101,7 +109,13 @@ class QASMToIRTransformer(Transformer):
         elif args[0] == "include":
             filename = args[1][1:-1]
 
-            with open(filename, "r") as f:
+            p = pathlib.Path(filename)
+
+            if not p.is_file():
+                # use the standard include directory
+                p = pathlib.Path(__file__).parent / "include" / filename
+
+            with open(p, "r") as f:
                 included_file = "".join(f.readlines())
 
             tree = qasm_parser.parse(included_file)

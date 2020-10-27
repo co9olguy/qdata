@@ -61,8 +61,8 @@ def dump(prog, f):
 
     Args:
         prog (.QasmProgram): a :class:`~.QasmProgram` object
-        f (Union[file, str, pathlib.Path]): File or filename from which
-            the data is loaded. If file is a string or Path, a value with the
+        f (Union[file, str, pathlib.Path]): File or filename to which
+            the data is saved. If file is a string or Path, a value with the
             .qasm extension is expected.
     """
     text = dumps(prog)

@@ -14,7 +14,8 @@ info = {
     "maintainer": "Nathan Killoran",
     "url": "https://github.com/co9olguy/qdata",
     "packages": find_packages(where="."),
-    "description": "An extension of OpenQASM which aims to add operators.",
+    "description": "An extension of OpenQASM which adds operators.",
+
     "long_description": open("README.md").read(),
     "long_description_content_type": "text/x-md",
     "provides": ["qdata"],

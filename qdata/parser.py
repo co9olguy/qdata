@@ -1,40 +1,38 @@
 """This module contains the QASMToIRTransformer and qasm_parser"""
-from enum import Enum
 import pathlib
+from enum import Enum
 
 import sympy
-
 from lark import Lark, Transformer
 
 from .ir import (
-    QasmProgram,
-    Lists,
-    Ops,
-    Declarations,
-    ParsedList,
-    unpack,
-    flatten,
-    format_wires,
     ArithmeticOperation,
-    UnaryOperation,
-    BinaryOperation,
-    Op,
-    Gate,
-    Channel,
-    Operator,
-    TensorOp,
-    Term,
-    Measure,
     Barrier,
-    EqualityCondition,
+    BinaryOperation,
+    Channel,
+    ClassicalRegister,
     ConditionalOp,
     Declaration,
-    ClassicalRegister,
-    QuantumRegister,
+    Declarations,
+    EqualityCondition,
+    Gate,
     GateDeclaration,
-    OperatorDeclaration
+    Lists,
+    Measure,
+    Op,
+    Operator,
+    OperatorDeclaration,
+    Ops,
+    ParsedList,
+    QasmProgram,
+    QuantumRegister,
+    TensorOp,
+    Term,
+    UnaryOperation,
+    flatten,
+    format_wires,
+    unpack,
 )
-
 
 with open(pathlib.Path(__file__).parent / "qasm.lark", "r") as f:
     qasm_grammar = "".join(f.readlines())
@@ -48,6 +46,7 @@ class QASMToIRTransformer(Transformer):
     Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
     All method names mirror the corresponding symbols from the grammar.
     """
+
     PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"
     cos = lambda self, _: "cos"
@@ -76,7 +75,7 @@ class QASMToIRTransformer(Transformer):
             # <decl>
             decl = args[0]
 
-            if decl.name in ['gate', 'operator', 'channel']:
+            if decl.name in ["gate", "operator", "channel"]:
                 # <gatedecl> <goplist> } or
                 # <gatedecl> } or
                 # <opdecl> <goplist> } or

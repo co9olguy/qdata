@@ -1,7 +1,8 @@
 """qdata package"""
 
 import os
-from .parser import qasm_parser, QASMToIRTransformer
+
+from .parser import QASMToIRTransformer, qasm_parser
 
 
 def load(f):

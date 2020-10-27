@@ -4,9 +4,9 @@ including the QASMProgram class"""
 from enum import Enum
 
 
-
 class QasmProgram:
     """Represents a program which follows the updated OPENQASM specification."""
+
     def __init__(self, version="2.0", filename=None):
         self.version = version
         self.statements = []
@@ -17,7 +17,7 @@ class QasmProgram:
 
         for stmt in self.statements:
             if isinstance(stmt, QasmProgram) and not insert_includes:
-                output.append(f"include \"{stmt.filename}\";")
+                output.append(f'include "{stmt.filename}";')
             else:
                 output.append(stmt.__repr__())
 
@@ -29,6 +29,7 @@ class QasmProgram:
 
 class Lists(Enum):
     """Enum class for representing various list types that appear in the grammar."""
+
     GOPLIST = 0
     ANYLIST = 1
     IDLIST = 2
@@ -38,6 +39,7 @@ class Lists(Enum):
 
 class Ops(Enum):
     """Enum class for representing various Op types that appear in the grammar."""
+
     GATE = 0
     OPERATOR = 1
     CHANNEL = 2
@@ -47,6 +49,7 @@ class Ops(Enum):
 
 class Declarations(Enum):
     """Enum class for representing various declarations that are allowed by the grammar."""
+
     QREG = 0
     CREG = 1
     GATE = 2
@@ -56,6 +59,7 @@ class Declarations(Enum):
 
 class ParsedList:
     """Bookkeeping class for the various list-like objects encountered while parsing."""
+
     def __init__(self, name, list_):
         self.name = name
         self.list = list_
@@ -68,6 +72,7 @@ def unpack(args):
     """Helper function to convert from the format lark gives to a more useful form."""
     (args,) = args
     return args
+
 
 def flatten(*args):
     """Flattens nested lists consisting of Python lists or NestedList objects."""
@@ -82,6 +87,7 @@ def flatten(*args):
     else:
         return [obj]
 
+
 def format_wires(wire_id_list):
     """Formats wire arguments as strings."""
     if len(wire_id_list) == 1:
@@ -94,6 +100,7 @@ def format_wires(wire_id_list):
 
 class ArithmeticOperation:
     """Lightweight class for representing arithmetic operations appearing within the grammar."""
+
     def __new__(cls, func, *exps):
         if len(exps) == 1:
             return super().__new__(UnaryOperation)
@@ -147,6 +154,7 @@ class ArithmeticOperation:
 
 class UnaryOperation(ArithmeticOperation):
     """Lightweight class for representing unary operations appearing within the grammar."""
+
     def __init__(self, func, exp):
         super().__init__(func, exp)
 
@@ -159,6 +167,7 @@ class UnaryOperation(ArithmeticOperation):
 
 class BinaryOperation(ArithmeticOperation):
     """Lightweight class for representing binary operations appearing within the grammar."""
+
     def __init__(self, func, exp1, exp2):
         super().__init__(func, exp1, exp2)
 
@@ -183,6 +192,7 @@ class BinaryOperation(ArithmeticOperation):
 
 class Op:
     """Class for representing quantum operations found in the grammar."""
+
     def __init__(self, kind, name, params, wires):
         self.kind = kind
         self.name = name
@@ -198,24 +208,28 @@ class Op:
 
 class Gate(Op):
     """Class for representing unitary quantum gates."""
+
     def __init__(self, name, params, wires):
         super().__init__(Ops.GATE, name, params, wires)
 
 
 class Channel(Op):
     """Class for representing non-unitary quantum channels."""
+
     def __init__(self, name, params, wires):
         super().__init__(Ops.CHANNEL, name, params, wires)
 
 
 class Operator(Op):
     """Class for representing quantum operators."""
+
     def __init__(self, name, params, wires):
         super().__init__(Ops.OPERATOR, name, params, wires)
 
 
 class TensorOp:
     """Class for representing a tensor product of two or more operators."""
+
     def __init__(self, *ops):
         self.ops = ops
         self._params = []
@@ -239,6 +253,7 @@ class TensorOp:
 
 class Term:
     """Class for representing a term in the expression of an operator as a linear combination of other operators."""
+
     def __init__(self, coeff, op):
         self.coeff = coeff
         self.op = op
@@ -249,6 +264,7 @@ class Term:
 
 class Measure(Op):
     """Class for representing the 'measure' instruction."""
+
     def __init__(self, wires):
         super().__init__(Ops.MEASURE, "measure", params=[], wires=wires)
 
@@ -258,6 +274,7 @@ class Measure(Op):
 
 class Barrier(Op):
     """Class for representing the 'barrier' keyword."""
+
     def __init__(self, wires):
         super().__init__(Ops.BARRIER, "barrier", params=[], wires=wires)
 
@@ -267,6 +284,7 @@ class EqualityCondition:
 
     For example, as appears in ``if(c==5) CX q[0],q[1];``.
     """
+
     def __init__(self, id_, integer):
         self.id = id_
         self.integer = integer
@@ -279,6 +297,7 @@ class ConditionalOp:
     """Class for representing the classical conditional expression from the specification.
 
     For example, as appears in ``barrier q[0],q[1];``."""
+
     def __init__(self, condition, op):
         self.condition = condition
         self.op = op
@@ -289,6 +308,7 @@ class ConditionalOp:
 
 class Declaration:
     """Base class for representing the declaration of an object that is supported in the grammar."""
+
     def __init__(self, decl_type, opaque=False, **kwargs):
         self.decl_type = decl_type
         self.name = decl_type.name.lower()
@@ -318,6 +338,7 @@ class ClassicalRegister(Declaration):
     """Class for representing the declaration of classical registers.
 
     For example, as in ``creg c[5];``"""
+
     def __init__(self, name, size):
         super().__init__(decl_type=Declarations.CREG, id_=name, size=size)
 
@@ -329,6 +350,7 @@ class QuantumRegister(Declaration):
     """Class for representing the declaration of quantum registers.
 
     For example, as in ``qreg q[5];``"""
+
     def __init__(self, name, size):
         super().__init__(decl_type=Declarations.QREG, id_=name, size=size)
 
@@ -340,6 +362,7 @@ class GateDeclaration(Declaration):
     """Class for representing the declaration of quantum gates.
 
     For example, as in ``gate g a {U(0,0,0) a;}``"""
+
     def __init__(self, op):
         super().__init__(decl_type=Declarations.GATE, op=op)
 
@@ -351,6 +374,7 @@ class OperatorDeclaration(Declaration):
     """Class for representing the declaration of quantum gates.
 
     For example, as in ``operator op a{XX a,b;}``"""
+
     def __init__(self, op):
         super().__init__(decl_type=Declarations.OPERATOR, op=op)
 

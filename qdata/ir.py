@@ -1,4 +1,31 @@
+"""This module contains the intermediate representation of the parsed Operator QASM,
+including the QASMProgram class"""
+
 from enum import Enum
+
+
+
+class QasmProgram:
+    """Represents a program which follows the updated OPENQASM specification."""
+    def __init__(self, version="2.0", filename=None):
+        self.version = version
+        self.statements = []
+        self.filename = filename
+
+    def serialize(self, insert_includes=False):
+        output = [f"OPENQASM {self.version};"]
+
+        for stmt in self.statements:
+            if isinstance(stmt, QasmProgram) and not insert_includes:
+                output.append(f"include \"{stmt.filename}\";")
+            else:
+                output.append(stmt.__repr__())
+
+        return "\n".join(output)
+
+    def __repr__(self):
+        return f"<QasmProgram: version={self.version}>"
+
 
 class Lists(Enum):
     """Enum class for representing various list types that appear in the grammar."""

@@ -1,0 +1,2 @@
+lark-parser==0.10.0
+sympy==1.5.1

@@ -84,7 +84,7 @@ def dump(prog, f):
         own_file = True
 
     try:
-        fid.write(bb)
+        fid.write(text)
     finally:
         if own_file:
             # safely close the file

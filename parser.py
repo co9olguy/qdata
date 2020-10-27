@@ -1,7 +1,9 @@
-from collections import namedtuple
+from enum import Enum
 import sympy
 
 from lark import Lark, Transformer
+
+from parser_utils import *
 
 with open("qasm.lark", "r") as f:
     qasm_grammar = "".join(f.readlines())
@@ -9,232 +11,8 @@ with open("qasm.lark", "r") as f:
 qasm_parser = Lark(qasm_grammar, start="mainprogram")
 
 
-def unpack(args):
-    (args,) = args
-    return args
-
-
-def flatten(obj):
-    if isinstance(obj, list):
-        flat_list = []
-        for item in obj:
-            flat_list.extend(flatten(item))
-        return flat_list
-    elif isinstance(obj, NamedList):
-        return flatten(obj.list)
-    else:
-        return [obj]
-
-
-def flatten_recursive_list(*args):
-    # flattens nested lists appearing in the AST
-    args = unpack(args)
-    return flatten(args)
-
-
-def format_wires(wire_id_list):
-    if len(wire_id_list) == 1:
-        # <id>
-        return wire_id_list[0]
-    elif len(wire_id_list) == 2:
-        # <id> [<nninteger>]
-        return "{}[{}]".format(*wire_id_list)
-
-
-NamedList = namedtuple("NamedList", ["name", "list"])
-
-class ArithmeticOp:
-
-    def __new__(cls, func, *exps):
-        if len(exps) == 1:
-            return super().__new__(UnaryOp)
-
-        if len(exps) == 2:
-            return super().__new__(BinaryOp)
-
-        return super().__new__(cls)
-
-    def __init__(self, func, *exps):
-        self.func = func
-        self.args = exps
-        self.tuple = (func, *exps)
-
-    def __repr__(self):
-        return "ArithmeticOp(func={}, exps={})".format(self.func, self.args)
-
-    def __add__(self, other):
-        return BinaryOp("add", self, other)
-
-    def __radd__(self, other):
-        return BinaryOp("add", other, self)
-
-    def __sub__(self, other):
-        return BinaryOp("sub", self, other)
-
-    def __rsub__(self, other):
-        return BinaryOp("sub", other, self)
-
-    def __mul__(self, other):
-        return BinaryOp("mult", self, other)
-
-    def __rmul__(self, other):
-        return BinaryOp("mult", other, self)
-
-    def __truediv__(self, other):
-        return BinaryOp("div", self, other)
-
-    def __rtruediv__(self, other):
-        return BinaryOp("div", other, self)
-
-    def __neg__(self):
-        return UnaryOp("neg", self)
-
-    def __pow__(self, power):
-        return BinaryOp("pow", self, power)
-
-    def __rpow__(self, power):
-        return BinaryOp("pow", power, self)
-
-
-class UnaryOp(ArithmeticOp):
-    def __init__(self, func, exp):
-        super().__init__(func, exp)
-
-    def __repr__(self):
-        if self.func == "neg":
-            return "-{}".format(self.args[0])
-
-        return "{}({})".format(*self.tuple)
-
-
-class BinaryOp(ArithmeticOp):
-    def __init__(self, func, exp1, exp2):
-        super().__init__(func, exp1, exp2)
-
-    def __repr__(self):
-        if self.func == "add":
-            return "{} + {}".format(*self.args)
-
-        if self.func == "sub":
-            return "{} - {}".format(*self.args)
-
-        if self.func == "mult":
-            return "{} * {}".format(*self.args)
-
-        if self.func == "div":
-            return "{} / {}".format(*self.args)
-
-        if self.func == "pow":
-            return "{} ^ {}".format(*self.args)
-
-        return "{}({}, {})".format(*self.tuple)
-
-
-class Op:
-    def __init__(self, name, params, wires):
-        self.name = name
-        self.params = params
-        self.wires = wires
-
-    def __repr__(self):
-        if not all(p is None for p in self.params):
-            return f"{self.name}({','.join(str(p) for p in self.params)}) {','.join(str(w) for w in self.wires)};"
-
-        return f"{self.name} {','.join(str(w) for w in self.wires)};"
-
-
-class Gate(Op):
-    pass
-
-
-class EqualityCondition:
-    def __init__(self, id_, integer):
-        self.id = id_
-        self.integer = integer
-
-    def __repr__(self):
-        return f"{self.id} == {self.integer}"
-
-
-class ConditionalOp:
-    def __init__(self, condition, op):
-        self.condition = condition
-        self.op = op
-
-    def __repr__(self):
-        return f"if ({self.condition}) {self.op}"
-
-
-class TensorOp:
-    def __init__(self, *ops):
-        self.ops = ops
-        self._params = []
-        self._wires = []
-
-        for o in self.ops:
-            self.params.extend(o.params)
-            self.wires.extend(o.wires)
-
-    @property
-    def params(self):
-        return self._params
-
-    @property
-    def wires(self):
-        return self._wires
-
-    def __repr__(self):
-        return ", ".join(str(o).replace(";", "") for o in self.ops) + ";"
-
-
-class Measure(Op):
-    def __init__(self, wires):
-        super().__init__("measure", params=[], wires=wires)
-
-    def __repr__(self):
-        return f"{self.name} {format_wires(self.wires[0])} -> {format_wires(self.wires[1])};"
-
-
-class Barrier(Op):
-    def __init__(self, wires):
-        super().__init__("barrier", params=[], wires=wires)
-
-
-class Term:
-    def __init__(self, coeff, op):
-        self.coeff = coeff
-        self.op = op
-
-    def __repr__(self):
-        return "{} {}".format(self.coeff, self.op)
-
-
-class Declaration:
-    def __init__(self, decl_type, **kwargs):
-        self.name = decl_type
-        self.kwargs = kwargs
-        self.opaque = False
-        self.goplist = []
-
-    def declaration_str(self):
-        return "{} declaration, kwargs={}".format(self.name, self.kwargs)
-
-    def __repr__(self):
-        if self.opaque or not self.goplist:
-            return self.declaration_str()
-
-        output = [self.declaration_str(), "{"]
-
-        for op in self.goplist:
-            # TODO: improve this so tensor products print like "x a, y b;"
-            # (they are not treated same as goplist)
-            output.append(f"    {op}")
-
-        output.append("}")
-        return "\n".join(output)
-
-
 class QasmProgram:
+    """Represents a program which follows the updated OPENQASM specification."""
     def __init__(self, version="2.0", filename=None):
         self.version = version
         self.statements = []
@@ -255,51 +33,12 @@ class QasmProgram:
         return f"<QasmProgram: version={self.version}>"
 
 
-
-# TODO: make separate declaration class for register declarations;
-# distinguish from QDeclarations
-
-class ClassicalRegister(Declaration):
-
-    def __init__(self, name, size):
-        super().__init__(decl_type="creg", id_=name, size=size)
-
-    def __repr__(self):
-        return f"creg {self.kwargs['id_']}[{self.kwargs['size']}];"
-
-
-class QuantumRegister(Declaration):
-
-    def __init__(self, name, size):
-        super().__init__(decl_type="qreg", id_=name, size=size)
-
-    def __repr__(self):
-        return f"qreg {self.kwargs['id_']}[{self.kwargs['size']}];"
-
-
-class QDeclaration(Declaration):
-    pass
-
-
-class GateDeclaration(QDeclaration):
-
-    def __init__(self, op):
-        super().__init__(decl_type="gate", op=op)
-
-    def declaration_str(self):
-        return f"gate {self.kwargs['op']}"[:-1]
-
-
-class OperatorDeclaration(QDeclaration):
-    def __init__(self, op):
-        super().__init__(decl_type="operator", op=op)
-
-    def declaration_str(self):
-        return f"operator {self.kwargs['op']}"[:-1]
-
-
 class QASMToIRTransformer(Transformer):
+    """Transformer for processing the Lark parse tree.
 
+    Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
+    All method names mirror the corresponding symbols from the grammar.
+    """
     PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"
     cos = lambda self, _: "cos"
@@ -328,7 +67,7 @@ class QASMToIRTransformer(Transformer):
             # <decl>
             decl = args[0]
 
-            if isinstance(decl, QDeclaration):
+            if decl.name in ['gate', 'operator', 'channel']:
                 # <gatedecl> <goplist> } or
                 # <gatedecl> } or
                 # <opdecl> <goplist> } or
@@ -342,8 +81,7 @@ class QASMToIRTransformer(Transformer):
             # opaque <id> <idlist>; or
             # opaque <id> () <idlist>; or
             # opaque <id> (<idlist>) <idlist>;
-            decl = self.qdecl(QDeclaration, *args[1:])
-            decl.opaque = True
+            decl = self.qdecl(Declaration, opaque=True, *args[1:])
             stmt = decl
 
         elif isinstance(args[0], Op):
@@ -421,7 +159,7 @@ class QASMToIRTransformer(Transformer):
         if len(args) == 1:
             # <uop>
             # <term>
-            return NamedList("goplist", flatten(args))
+            return ParsedList(Lists.GOPLIST, flatten(args))
 
         if "barrier" in args:
             if len(args) == 2:
@@ -433,12 +171,12 @@ class QASMToIRTransformer(Transformer):
             goplist = args[0]
             idlist = args[2]
             barrier = Barrier(wires=idlist.list)
-            return NamedList("goplist", goplist.list + [barrier])
+            return ParsedList(Lists.GOPLIST, goplist.list + [barrier])
 
-        if isinstance(args[0], NamedList):
+        if isinstance(args[0], ParsedList):
             # <goplist> <uop> or
             # <goplist> <term>
-            return NamedList("goplist", flatten(args))
+            return ParsedList(Lists.GOPLIST, flatten(args))
 
     def term(self, *args):
         # <term>
@@ -466,7 +204,7 @@ class QASMToIRTransformer(Transformer):
             # reset <argument>;
             wires = args[1].list
         elif args[0] == "measure":
-            wires = [x.list for x in args[1:]]
+            wires = args[1:]
             return Measure(wires=wires)
 
         return Op(name=args[0], params=[], wires=wires)
@@ -479,14 +217,16 @@ class QASMToIRTransformer(Transformer):
 
         if op_name == "CX":
             params = [None]
-            wires = [x.list for x in extra_args]
+            wires = flatten(extra_args)
+            return Gate(op_name, params, wires)
 
-        elif op_name == "U":
+        if op_name == "U":
             explist, argument = extra_args
             params = explist.list
-            wires = argument.list
+            wires = argument
+            return Gate(op_name, params, wires)
 
-        elif extra_args[0].name == "explist":
+        if extra_args[0].name == Lists.EXPLIST:
             # gate has parameters
             # <id>(<explist>) <anylist>;
             # <id>(<explist>) <anylist>, <uop>
@@ -496,7 +236,7 @@ class QASMToIRTransformer(Transformer):
             if len(extra_args) > 2:
                 other_op = extra_args[2]
 
-        elif extra_args[0].name == "anylist":
+        elif extra_args[0].name == Lists.ANYLIST:
             # gate has no parameters;
             # <id><anylist>
             # <id>()<anylist>
@@ -510,13 +250,16 @@ class QASMToIRTransformer(Transformer):
             # <id> <anylist> , <uop>
             # <id>() <anylist>, <uop>
             # <id>(<explist>) <anylist>, <uop>
-            op = Op(op_name, params, wires)
+            # This case only appears for tensor products of operators
+            # TODO: consider extending the grammar so users can specify
+            #  "simultaneous" gates/channels via a tensor product
+            op = Op(Ops.OPERATOR, op_name, params, wires)
             return TensorOp(op, other_op)
 
-        if extra_args[0].name == "idlist":
+        if extra_args[0].name == Lists.IDLIST:
             # TODO: this case should not occur, according
             # to the original spec. Determine what is causing it
-            # @co9olguy: this is because self.gatedecl calls
+            # @josh146: this is because self.gatedecl calls
             # this method, and self.gatedecl *can* have idlist.
             if len(extra_args) == 1:
                 idlist = extra_args[0]
@@ -531,17 +274,17 @@ class QASMToIRTransformer(Transformer):
 
     def anylist(self, *args):
         # either <idlist> or <mixedlist>
-        return NamedList("anylist", unpack(args))
+        return ParsedList(Lists.ANYLIST, unpack(args))
 
     def idlist(self, *args):
         # <id>
         # <idlist>, <id>
-        flat_list = flatten_recursive_list(*args)
-        return NamedList("idlist", flat_list)
+        flat_list = flatten(*args)
+        return ParsedList(Lists.IDLIST, flat_list)
 
     def mixedlist(self, *args):
         args = unpack(args)
-        if isinstance(args[0], NamedList):
+        if isinstance(args[0], ParsedList):
             # <mixedlist>, <id> or
             # <mixedlist>, <id> [<nninteger>] or
             # <idlist>, <id> [<nninteger>]
@@ -551,17 +294,16 @@ class QASMToIRTransformer(Transformer):
         else:
             # <id> [<nninteger>]
             wires = [format_wires(args)]
-        return NamedList("mixedlist", wires)
+        return ParsedList(Lists.MIXEDLIST, wires)
 
     def argument(self, *args):
-        args = unpack(args)
         # <id> or
         # <id>[<nninteger>]
-        return NamedList("argument", args)
+        return unpack(args)
 
     def explist(self, *args):
-        flat_list = flatten_recursive_list(*args)
-        return NamedList("explist", flat_list)
+        flat_list = flatten(*args)
+        return ParsedList(Lists.EXPLIST, flat_list)
 
     def exp(self, *args):
         args = unpack(args)
@@ -571,7 +313,7 @@ class QASMToIRTransformer(Transformer):
         elif len(args) == 2:
             # unary ops
             func, x = args
-            return UnaryOp(func, x)
+            return UnaryOperation(func, x)
 
     def add(self, exp):
         (lterm, rterm) = exp

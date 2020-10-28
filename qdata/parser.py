@@ -61,6 +61,11 @@ class QASMToIRTransformer(Transformer):
 
         * The OpenQASM version specifier
         * The OpenQASM program
+
+        .. code-block:: text
+
+            statement
+            program statement
         """
         args = unpack(args)
 
@@ -71,8 +76,23 @@ class QASMToIRTransformer(Transformer):
         return self._program
 
     def statement(self, *args):
-        """A catch-all for all OpenQASM statement; this includes register, operator, and gate
-        declarations, include statements, quantum operations to be applied, and barriers.
+        """A catch-all for all OpenQASM statements; this includes register, operator, and gate
+        declarations, ``include`` statements, quantum operations to be applied, and barriers.
+
+        .. code-block:: text
+
+            decl
+            gatedecl goplist "}"
+            gatedecl "}"
+            opdecl goplist "}"
+            opdecl "}"
+            OPAQUE id idlist ";"
+            OPAQUE id "(" ")" idlist ";"
+            OPAQUE id "(" idlist ")" idlist ";"
+            qop
+            IF "(" id "==" nninteger ")" qop
+            BARRIER anylist ";"
+            INCLUDE ESCAPED_STRING ";"
         """
         args = unpack(args)
 
@@ -94,7 +114,7 @@ class QASMToIRTransformer(Transformer):
             # opaque <id> <idlist>; or
             # opaque <id> () <idlist>; or
             # opaque <id> (<idlist>) <idlist>;
-            decl = self.qdecl(Declaration, *args[1:], opaque=True)
+            decl = self.qdecl(Declaration, opaque=True, *args[1:])
             stmt = decl
 
         elif isinstance(args[0], Op):
@@ -385,13 +405,25 @@ class QASMToIRTransformer(Transformer):
         return Gate(op_name, params, wires)
 
     def anylist(self, *args):
-        """Either ``idlist`` or ``mixedlist``"""
+        """Either ``idlist`` or ``mixedlist``.
+
+        .. code-block:: text
+
+            idlist
+            mixedlist
+        """
         return ParsedList(Lists.ANYLIST, unpack(args))
 
     def idlist(self, *args):
         """Either a single id, or a list of id's. Note that
         an id is an alphanumeric label (with underscores allowed)
-        that *must* begin with a lowercase character."""
+        that *must* begin with a lowercase character.
+
+        .. code-block:: text
+
+            id
+            idlist "," id
+        """
         # <id>
         # <idlist>, <id>
         flat_list = flatten(*args)
@@ -425,11 +457,23 @@ class QASMToIRTransformer(Transformer):
         return ParsedList(Lists.MIXEDLIST, wires)
 
     def argument(self, *args):
-        """An argument is either an id, or an id with a non-negative integer index."""
+        """An argument is either an id, or an id with a non-negative integer index.
+
+        .. code-block:: text
+
+            id
+            id "[" nninteger "]"
+        """
         return unpack(args)
 
     def explist(self, *args):
-        """Either a single expression, or a comma separated list of expressions"""
+        """Either a single expression, or a comma separated list of expressions.
+
+        .. code-block:: text
+
+            exp
+            explist "," exp
+        """
         flat_list = flatten(*args)
         return ParsedList(Lists.EXPLIST, flat_list)
 

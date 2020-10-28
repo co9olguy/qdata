@@ -58,6 +58,7 @@ def test_instantiate_barrier():
     assert op.wires == [0, 1]
     assert op.__str__() == "barrier 0,1;"
 
+
 all_possible_ops = [
     ir.Op(ir.Ops.OPERATOR, "some_op", [], [0, 1]),
     ir.Op(ir.Ops.GATE, "some_gate", ["alpha", "beta"], [0, 1]),
@@ -65,6 +66,8 @@ all_possible_ops = [
     ir.Gate("some_gate", ["alpha", "beta"], [0, 1]),
     ir.Barrier([0, 1]),
 ]
+
+
 @pytest.mark.parametrize("op", all_possible_ops)
 def test_instantiate_barriered_op(op):
     """Test that instantiating a conditional op works correctly"""

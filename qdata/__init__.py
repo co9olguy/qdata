@@ -29,8 +29,8 @@ def load(f):
             fid = open(filename, "r")
             own_file = True
 
-    except TypeError:
-        raise ValueError("file must be a string, pathlib.Path, or file-like object")
+    except TypeError as e:
+        raise ValueError("file must be a string, pathlib.Path, or file-like object") from e
 
     try:
         string = fid.read()

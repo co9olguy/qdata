@@ -123,22 +123,22 @@ def format_wires(wire_id_list):
 class ArithmeticOperation:
     """Lightweight class for representing arithmetic operations appearing within the grammar."""
 
-    def __new__(cls, func, *exps):  # pylint:disable=unused-argument
-        if len(exps) == 1:
+    def __new__(cls, func, *args):  # pylint:disable=unused-argument
+        if len(args) == 1:
             return super().__new__(UnaryOperation)
 
-        if len(exps) == 2:
+        if len(args) == 2:
             return super().__new__(BinaryOperation)
 
         return super().__new__(cls)
 
-    def __init__(self, func, *exps):
+    def __init__(self, func, *args):
         self.func = func
-        self.args = exps
-        self.tuple = (func, *exps)
+        self.args = args
+        self.tuple = (func, *args)
 
     def __repr__(self):
-        return "ArithmeticOp(func={}, exps={})".format(self.func, self.args)
+        return "ArithmeticOp(func={}, args={})".format(self.func, self.args)
 
     def __add__(self, other):
         return BinaryOperation("add", self, other)

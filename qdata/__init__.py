@@ -29,8 +29,8 @@ def load(f):
             fid = open(filename, "r")
             own_file = True
 
-    except TypeError:
-        raise ValueError("file must be a string, pathlib.Path, or file-like object")
+    except TypeError as e:
+        raise ValueError("file must be a string, pathlib.Path, or file-like object") from e
 
     try:
         string = fid.read()
@@ -54,10 +54,10 @@ def loads(string):
     """
     tree = qasm_parser.parse(string)
     tree = QASMToIRTransformer().transform(tree)
-    return tree.serialize()
+    return tree
 
 
-def dump(prog, f):
+def dump(prog, f, inline=False):
     """Serialize an operator QASM program to a `.write()`-supporting file-like object.
 
     Args:
@@ -65,8 +65,11 @@ def dump(prog, f):
         f (Union[file, str, pathlib.Path]): File or filename to which
             the data is saved. If file is a string or Path, a value with the
             .qasm extension is expected.
+        inline (bool): Whether the files listed via the ``include``
+            keyword should be inserted, inline, into the serialized program.
+
     """
-    text = dumps(prog)
+    text = dumps(prog, inline=inline)
 
     if hasattr(f, "read"):
         # argument file is a file-object
@@ -94,13 +97,15 @@ def dump(prog, f):
     f.write(text)
 
 
-def dumps(prog):
+def dumps(prog, inline=False):
     """Serialize an operator QASM program to a string.
 
     Args:
         prog (.QasmProgram): a :class:`~.QasmProgram` object
+        inline (bool): Whether the files listed via the ``include``
+            keyword should be inserted, inline, into the serialized program.
 
     Returns:
         str: the serialized operator QASM program
     """
-    return prog.serialize()
+    return prog.serialize(inline=inline)

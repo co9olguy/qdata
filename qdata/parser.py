@@ -1,26 +1,21 @@
 """This module contains the QASMToIRTransformer and qasm_parser"""
+# pylint: disable=too-many-public-methods
 import pathlib
-from enum import Enum
 
 import sympy
 from lark import Lark, Transformer
 
 from .ir import (
-    ArithmeticOperation,
     Barrier,
-    BinaryOperation,
-    Channel,
     ClassicalRegister,
     ConditionalOp,
     Declaration,
-    Declarations,
     EqualityCondition,
     Gate,
     GateDeclaration,
     Lists,
     Measure,
     Op,
-    Operator,
     OperatorDeclaration,
     Ops,
     ParsedList,
@@ -34,8 +29,8 @@ from .ir import (
     unpack,
 )
 
-with open(pathlib.Path(__file__).parent / "qasm.lark", "r") as f:
-    qasm_grammar = "".join(f.readlines())
+with open(pathlib.Path(__file__).parent / "qasm.lark", "r") as _f:
+    qasm_grammar = "".join(_f.readlines())
 
 qasm_parser = Lark(qasm_grammar, start="mainprogram")
 
@@ -46,6 +41,8 @@ class QASMToIRTransformer(Transformer):
     Transformers visit each node of the tree, and run the appropriate method on it according to the node's data.
     All method names mirror the corresponding symbols from the grammar.
     """
+
+    # pylint:disable=no-self-use
 
     PI = lambda self, _: sympy.pi
     sin = lambda self, _: "sin"
@@ -60,6 +57,11 @@ class QASMToIRTransformer(Transformer):
         super().__init__(self, *args, **kwargs)
 
     def mainprogram(self, *args):
+        """This is the root of the tree, and consists of two components:
+
+        * The OpenQASM version specifier
+        * The OpenQASM program
+        """
         args = unpack(args)
 
         if len(args) > 1:
@@ -69,6 +71,9 @@ class QASMToIRTransformer(Transformer):
         return self._program
 
     def statement(self, *args):
+        """A catch-all for all OpenQASM statement; this includes register, operator, and gate
+        declarations, include statements, quantum operations to be applied, and barriers.
+        """
         args = unpack(args)
 
         if isinstance(args[0], Declaration):
@@ -89,7 +94,7 @@ class QASMToIRTransformer(Transformer):
             # opaque <id> <idlist>; or
             # opaque <id> () <idlist>; or
             # opaque <id> (<idlist>) <idlist>;
-            decl = self.qdecl(Declaration, opaque=True, *args[1:])
+            decl = self.qdecl(Declaration, *args[1:], opaque=True)
             stmt = decl
 
         elif isinstance(args[0], Op):
@@ -127,6 +132,12 @@ class QASMToIRTransformer(Transformer):
         self._program.statements.append(stmt)
 
     def decl(self, *args):
+        """A quantum or classical register declaration.
+
+        .. code-block:: text
+
+            (QREG | CREG) id "[" nninteger "]" ";"
+        """
         args = unpack(args)
         reg_type = str(args[0])
         id_, size = args[1:]
@@ -134,26 +145,49 @@ class QASMToIRTransformer(Transformer):
         if reg_type == "creg":
             return ClassicalRegister(name=id_, size=size)
 
-        elif reg_type == "qreg":
+        if reg_type == "qreg":
             return QuantumRegister(name=id_, size=size)
 
         return Declaration(reg_type, id_=id_, size=size)
 
     def opdecl(self, *args):
+        """An operator declaration.
+
+        .. code-block:: text
+
+            OPERATOR id idlist "{"
+            OPERATOR id "(" ")" idlist "{"
+            OPERATOR id "(" idlist ")" idlist "{"
+        """
         args = unpack(args)
         op = self.uop([*args[1:]])
         return OperatorDeclaration(op=op)
 
     def gatedecl(self, *args):
+        """A gate declaration.
+
+        .. code-block:: text
+
+            GATE id idlist "{"
+            GATE id "(" ")" idlist "{"
+            GATE id "(" idlist ")" idlist "{"
+        """
         args = unpack(args)
         op = self.uop([*args[1:]])
         return GateDeclaration(op=op)
 
-    def qdecl(self, cls, *args):
+    @staticmethod
+    def qdecl(decl_cls, *args, **kwargs):
+        """A utility static method for easily constructing and returning
+        the correct ``Declaration`` class.
+        """
+        # TODO: this seems to only be called from a single location; the OPAQUE
+        # branch within the statement. opdecl and gatedecl do not call this
+        # method. It is probably worth removing this separate method.
         args = unpack(args)
         decl_type = str(args[0])
         id_ = args[1]
-        idlist1 = flatten(args[2])
+        # idlist1 = flatten(args[2]) (this variable does not seem to be used?)
 
         if len(args) == 4:
             # decl_type <id> ( <idlist> ) <idlist> {
@@ -164,10 +198,24 @@ class QASMToIRTransformer(Transformer):
             param_ids = None
 
         register_ids = flatten(args[-1])
-        kwargs = {"inputs": param_ids, "wires": register_ids}
-        return cls(decl_type, name=id_, **kwargs)
+        kwargs = {"inputs": param_ids, "wires": register_ids, **kwargs}
+        return decl_cls(decl_type, name=id_, **kwargs)
 
     def goplist(self, *args):
+        """A node containing a list of gate operations. The list of
+        gate operations can either be a single unitary operation,
+        an operator term, or a barrier. Alternatively, it can be a combination
+        of the above.
+
+        .. code-block:: text
+
+            uop
+            term
+            BARRIER idlist ";"
+            goplist uop
+            goplist term
+            goplist BARRIER idlist ";"
+        """
         args = unpack(args)
 
         if len(args) == 1:
@@ -192,7 +240,19 @@ class QASMToIRTransformer(Transformer):
             # <goplist> <term>
             return ParsedList(Lists.GOPLIST, flatten(args))
 
+        # TODO: Add proper parser validation and exceptions, including returning
+        # to the user the source code line number that causes the exception.
+        # The Lark documentation should have details regarding this.
+        raise ValueError(f"Invalid GOPLIST arguments: {args}")
+
     def term(self, *args):
+        """A single term of an operator.
+
+        .. code-block:: text
+
+            exp uop
+            "-" uop
+        """
         # <term>
         args = unpack(args)
 
@@ -208,6 +268,15 @@ class QASMToIRTransformer(Transformer):
         return flatten(t)
 
     def qop(self, *args):
+        """A quantum operation. This consists of either a unitary operation (uop),
+        measurement, or wire reset.
+
+        .. code-block:: text
+
+            uop
+            MEASURE argument "->" argument ";"
+            RESET argument ";"
+        """
         args = unpack(args)
 
         if len(args) == 1:
@@ -217,13 +286,42 @@ class QASMToIRTransformer(Transformer):
         if args[0] == "reset":
             # reset <argument>;
             wires = args[1].list
-        elif args[0] == "measure":
+            return Op(Ops.RESET, name=args[0], params=[], wires=wires)
+
+        if args[0] == "measure":
             wires = args[1:]
             return Measure(wires=wires)
 
-        return Op(name=args[0], params=[], wires=wires)
+        # TODO: Check the operator kind this 'catch-all' return
+        # actually refers to. Perhaps this return statement isn't even covered?
+        return Op(Ops.GATE, name=args[0], params=[], wires=wires)
 
     def uop(self, *args):
+        """A unitary operation.
+
+        This can consist of:
+
+        * Intrinsic quantum operations (U, CX)
+        * Declared quantum operations
+        * A tensor product of operators acting on different wires (specified via comma separated values)
+
+        Unitary operations can have parameters, and can be applied
+        to either single wires, or a list of wires.
+
+        .. code-block:: text
+
+            U "(" explist ")" argument ";"
+            CX argument "," argument ";"
+            id anylist ";"
+            id "(" ")" anylist ";"
+            id "(" explist ")" anylist ";"
+            id anylist "," uop
+            id "(" ")" anylist "," uop
+            id "(" explist ")" anylist "," uop
+        """
+
+        # TODO: should we add support for more primitives/intrinsic gates? OpenQASM 2.0 will likely
+        # be updated soon to replace CX, U with CX, P, SX as the intrinsic gate set.
         args = unpack(args)
         op_name = str(args[0])
         other_op = None
@@ -287,16 +385,32 @@ class QASMToIRTransformer(Transformer):
         return Gate(op_name, params, wires)
 
     def anylist(self, *args):
-        # either <idlist> or <mixedlist>
+        """Either ``idlist`` or ``mixedlist``"""
         return ParsedList(Lists.ANYLIST, unpack(args))
 
     def idlist(self, *args):
+        """Either a single id, or a list of id's. Note that
+        an id is an alphanumeric label (with underscores allowed)
+        that *must* begin with a lowercase character."""
         # <id>
         # <idlist>, <id>
         flat_list = flatten(*args)
         return ParsedList(Lists.IDLIST, flat_list)
 
     def mixedlist(self, *args):
+        """A mixed list is a list that includes a combination
+        (of comma separated) id's, and id's with a non-negative integer index (specified
+        via square brackets).
+
+        .. code-block:: text
+
+            id "[" nninteger "]"
+            mixedlist "," id
+            mixedlist "," id "[" nninteger "]"
+            idlist "," id "[" nninteger "]"
+        """
+        # TODO: This definition doesn't really make sense. The mixedlist
+        # definition could be re-written using `argument`.
         args = unpack(args)
         if isinstance(args[0], ParsedList):
             # <mixedlist>, <id> or
@@ -311,57 +425,106 @@ class QASMToIRTransformer(Transformer):
         return ParsedList(Lists.MIXEDLIST, wires)
 
     def argument(self, *args):
-        # <id> or
-        # <id>[<nninteger>]
+        """An argument is either an id, or an id with a non-negative integer index."""
         return unpack(args)
 
     def explist(self, *args):
+        """Either a single expression, or a comma separated list of expressions"""
         flat_list = flatten(*args)
         return ParsedList(Lists.EXPLIST, flat_list)
 
     def exp(self, *args):
+        """A mathematica expression.
+
+        This includes:
+
+        * A real value
+        * A non-negative integer
+        * Mathematical constants (currently just pi)
+        * A symbolic parameter (simply id, so must always start with a lowercase character)
+        * Parenthesis
+        * Unary arithmetic operators (-, unaryop)
+        * Binary arithmetic operators (+, -, *, /, ^)
+
+        .. code-block:: text
+
+            real
+            nninteger
+            PI
+            id -> parameter
+            exp "+" exp -> add
+            exp "-" exp -> subtract
+            exp "*" exp -> multiply
+            exp "/" exp -> divide
+            "-" exp -> negate
+            exp "^" exp -> binary_exp
+            "(" exp ")"
+            unaryop "(" exp ")"
+        """
+        # TODO: Check what happens if a negative integer is specified. This will likely
+        # result in a float being returned, which is not ideal (larger memory requirements,
+        # plus the potential for propagation of precision error).
+
+        # TODO: support parameters that start with a capital letter?
+
         args = unpack(args)
+
         if len(args) == 1:
             # numbers, ids, or resolved exps, just need to flatten
             return unpack(args)
-        elif len(args) == 2:
+
+        if len(args) == 2:
             # unary ops
             func, x = args
             return UnaryOperation(func, x)
 
+        # TODO: Have proper validation here
+        raise ValueError
+
     def add(self, exp):
+        """Binary addition"""
         (lterm, rterm) = exp
         return lterm + rterm
 
     def subtract(self, exp):
+        """Binary subtraction"""
         (lterm, rterm) = exp
         return lterm - rterm
 
     def multiply(self, exp):
+        """Binary multiplication"""
         (lterm, rterm) = exp
         return lterm * rterm
 
     def divide(self, exp):
+        """Binary floating-point division"""
         (lterm, rterm) = exp
         return lterm / rterm
 
     def binary_exp(self, exp):
+        """Binary exponentiation"""
         (base, exponent) = exp
         return base ** exponent
 
     def negate(self, exp):
+        """Unary negation"""
         (val,) = exp
         return -val
 
     def id_(self, name):
+        """Returns the Python string corresponding to the id"""
         name = unpack(name)
         return name.value
 
     def real(self, args):
+        """Returns a Python float corresponding to a real"""
         return float(unpack(args))
 
     def nninteger(self, n):
+        """Returns a Python integer corresponding to a non-negative integer"""
         return int(unpack(n))
 
     def parameter(self, name):
+        """Returns a sympy symbol representing a symbolic parameter used
+        within an expression"""
         return sympy.Symbol(name[0])

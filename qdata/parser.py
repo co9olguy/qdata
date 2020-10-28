@@ -187,7 +187,7 @@ class QASMToIRTransformer(Transformer):
         args = unpack(args)
         decl_type = str(args[0])
         id_ = args[1]
-        idlist1 = flatten(args[2])
+        # idlist1 = flatten(args[2]) (this variable does not seem to be used?)
 
         if len(args) == 4:
             # decl_type <id> ( <idlist> ) <idlist> {

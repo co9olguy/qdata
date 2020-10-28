@@ -2,7 +2,7 @@ import sys
 
 import pytest
 
-import parser
+from qdata import ir
 
 
 def test_instantiate_op(capsys):
@@ -28,7 +28,6 @@ def test_instantiate_op_params(capsys):
     assert op.params == ['alpha', 'beta']
     assert op.wires == [0,1]
 
-    print(op)
     captured = capsys.readouterr()
     assert captured.out == "op(alpha,beta) 0,1;\n"
 
@@ -41,7 +40,6 @@ def test_instantiate_gate(capsys):
     assert op.params == []
     assert op.wires == [0, 1]
 
-    print(op)
     captured = capsys.readouterr()
     assert captured.out == "gate 0,1;\n"
 

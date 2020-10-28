@@ -335,7 +335,7 @@ class Declaration:
         self.goplist = []
 
     def declaration_str(self):
-        """The serialized declaration definition. Note that this only includes
+        """The serialized declaration. Note that this only includes
         the name of the declaration and the declaration keyword arguments; for the
         full serialization (including constituent operators) please see ``__repr__``.
         """

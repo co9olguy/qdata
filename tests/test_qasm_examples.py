@@ -1,29 +1,50 @@
 import os
+import re
 import pytest
 
 from qdata import parser
 
-path = "examples/qasm_repo_examples/"
-qasm_repo_examples = [path + f for f in os.listdir(path)]
-path = "examples/example_data/"
-quantum_data_examples = [path + f for f in os.listdir(path)]
+def clean(qasm_line):
+    """Helper function to strip out comments, whitespace, and empty braces from a line from a qasm file."""
+    line = qasm_line.split("//")[0]  # comments
+    line = " ".join(re.split(r"[{]\s*[}]", line))  # empty braces ( )
+    line = " ".join(re.split(r"[(]\s*[)]", line))  # empty braces { }
+    line = " ".join(line.split())  # normalize whitespace
+    return line
 
+path = "examples/qasm_repo_examples/"
+qasm_repo_examples = [os.path.join(path, f) for f in os.listdir(path)]
+path = "examples/example_data/"
+quantum_data_examples = [os.path.join(path, f) for f in os.listdir(path)]
 
 @pytest.mark.parametrize("fname", qasm_repo_examples)
-def test_instantiate_op(capsys, fname):
-    """Test that instantiating an operation works correctly"""
+def test_deserialize_and_serialize(fname):
+    """Test that deserializing a qasm file and reserializing it results in
+    comparable strings (modulo comments, whitespace, and empty braces)."""
     with open(fname, "r") as file:
-        qasm_str = file.readlines()
-    tree = parser.qasm_parser.parse("".join(qasm_str))
-    tree = parser.QASMToIRTransformer().transform(tree)
-    print(tree)
-    serialized_tree = tree.serialize().split("\n")
+        qasm_lines = file.readlines()
 
-    qasm_str_no_comments = []
-    for line in qasm_str:
-        line = line.split("//")[0].strip("\n")
-        if line:
-            qasm_str_no_comments.append(line)
-    assert len(qasm_str_no_comments) == len(serialized_tree)
-    for (s1, s2) in zip(qasm_str_no_comments, serialized_tree):
-        assert s1 == s2
+    # strip out whitespace, comments, and empty braces
+    qasm_lines = [clean(line) for line in qasm_lines]
+    qasm_lines = [line for line in qasm_lines if line]
+
+    # split lines at semicolons
+    formatted_qasm_lines = []
+    for line in qasm_lines:
+        split_lines = line.split(";")
+        if len(split_lines) == 1:
+            formatted_qasm_lines.append(split_lines[0])
+        elif split_lines[1] == "":
+            formatted_qasm_lines.append(split_lines[0] + ";")
+        else:
+            formatted_qasm_lines.extend(clean(line) + ";" for line in split_lines if clean(line))
+
+    tree = parser.qasm_parser.parse("\n".join(formatted_qasm_lines))
+    tree = parser.QASMToIRTransformer().transform(tree)
+    serialized_lines = tree.serialize().split("\n")
+    serialized_lines = [clean(line) for line in serialized_lines]
+    serialized_lines = [line for line in serialized_lines if line]
+
+    assert len(formatted_qasm_lines) == len(serialized_lines)
+    for (l1, l2) in zip(formatted_qasm_lines, serialized_lines):
+        assert l1 == l2

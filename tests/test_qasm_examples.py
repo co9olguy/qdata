@@ -1,12 +1,12 @@
-import sys
 import os
 import pytest
 
-import parser
+from qdata import parser
 
-qasm_repo_examples = ['qasm_repo_examples/'+ f for f in os.listdir('qasm_repo_examples')]
-
-quantum_data_examples = ['example_data/'+ f for f in os.listdir('example_data')]
+path = 'examples/qasm_repo_examples/'
+qasm_repo_examples = [path + f for f in os.listdir(path)]
+path = 'examples/example_data/'
+quantum_data_examples = [path + f for f in os.listdir(path)]
 
 @pytest.mark.parametrize("fname", qasm_repo_examples)
 def test_instantiate_op(capsys, fname):

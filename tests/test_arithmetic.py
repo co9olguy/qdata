@@ -10,7 +10,7 @@ def test_instantiate_arbitrary_operation(capsys):
     correctly"""
 
     op = ir.ArithmeticOperation("func", 1, 2, 3, 4)
-    assert not isinstance(op, (ir.BinaryOp, ir.UnaryOp))
+    assert not isinstance(op, (ir.BinaryOperation, ir.UnaryOperation))
     assert op.func == "func"
     assert op.args == (1, 2, 3, 4)
     assert op.tuple == ("func", 1, 2, 3, 4)
@@ -24,7 +24,7 @@ def test_instantiate_unary_operation(capsys):
     correctly"""
 
     op = ir.ArithmeticOperation("func", 1)
-    assert isinstance(op, ir.UnaryOp)
+    assert isinstance(op, ir.UnaryOperation)
 
     captured = capsys.readouterr()
     assert captured.out == "func(1)\n"
@@ -35,7 +35,7 @@ def test_instantiate_binary_operation(capsys):
     correctly"""
 
     op = ir.ArithmeticOperation("func", 1, 2)
-    assert isinstance(op, ir.BinaryOp)
+    assert isinstance(op, ir.BinaryOperation)
 
     captured = capsys.readouterr()
     assert captured.out == "func(1, 2)\n"

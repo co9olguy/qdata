@@ -425,8 +425,7 @@ class QASMToIRTransformer(Transformer):
         return ParsedList(Lists.MIXEDLIST, wires)
 
     def argument(self, *args):
-        """An argument is either an id, or an id with a non-negative integer index.
-        """
+        """An argument is either an id, or an id with a non-negative integer index."""
         return unpack(args)
 
     def explist(self, *args):

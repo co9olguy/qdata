@@ -257,12 +257,12 @@ class TensorOp:
 
     @property
     def params(self):
-        """A flat list containing all the parameters of constituent operators"""
+        """A flat list containing all the parameters of constituent operators."""
         return self._params
 
     @property
     def wires(self):
-        """A flat list containing the wires of all constituent operators"""
+        """A flat list containing the wires of all constituent operators."""
         return self._wires
 
     def __repr__(self):

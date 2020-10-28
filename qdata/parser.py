@@ -71,8 +71,8 @@ class QASMToIRTransformer(Transformer):
         return self._program
 
     def statement(self, *args):
-        """A catch-all for all OpenQASM statement; this includes register, operator, and gate
-        declarations, include statements, quantum operations to be applied, and barriers.
+        """A catch-all for all OpenQASM statements; this includes register, operator, and gate
+        declarations, ``include`` statements, quantum operations to be applied, and barriers.
         """
         args = unpack(args)
 
@@ -94,7 +94,7 @@ class QASMToIRTransformer(Transformer):
             # opaque <id> <idlist>; or
             # opaque <id> () <idlist>; or
             # opaque <id> (<idlist>) <idlist>;
-            decl = self.qdecl(Declaration, *args[1:], opaque=True)
+            decl = self.qdecl(Declaration, opaque=True, *args[1:])
             stmt = decl
 
         elif isinstance(args[0], Op):

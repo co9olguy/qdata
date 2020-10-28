@@ -3,7 +3,7 @@ on:
 - pull_request
 
 jobs:
-  black:
+  pylint:
     runs-on: ubuntu-latest
 
     steps:
@@ -17,10 +17,12 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install dependencies
-        run: pip install pylint
-
       - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          pip install pylint
+          pip install -e .
 
       - name: Run pylint
         run: pylint qdata --disable=fixme

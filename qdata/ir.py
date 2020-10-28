@@ -1,5 +1,6 @@
 """This module contains the intermediate representation of the parsed Operator QASM,
 including the QASMProgram class"""
+# pylint:disable=too-few-public-methods
 
 from enum import Enum
 
@@ -7,17 +8,32 @@ from enum import Enum
 class QasmProgram:
     """Represents a program which follows the updated OPENQASM specification."""
 
-    def __init__(self, version="2.0", filename=None):
+    def __init__(self, version=None, filename=None):
         self.version = version
         self.statements = []
         self.filename = filename
 
-    def serialize(self, insert_includes=False):
-        output = [f"OPENQASM {self.version};"]
+    def serialize(self, inline=False):
+        """Serialize the operator QASM intermediate representation.
+
+        Args:
+            inline (bool): Whether the files listed via the ``include``
+                keyword should be inserted, inline, into the serialized program.
+
+        Returns:
+            str: the serialized operator OpenQASM program
+        """
+        output = []
+
+        if self.version is not None:
+            output.append(f"OPENQASM {self.version};")
 
         for stmt in self.statements:
-            if isinstance(stmt, QasmProgram) and not insert_includes:
-                output.append(f'include "{stmt.filename}";')
+            if isinstance(stmt, QasmProgram):
+                if inline:
+                    output.append(stmt.serialize(inline=inline))
+                else:
+                    output.append(f'include "{stmt.filename}";')
             else:
                 output.append(stmt.__repr__())
 
@@ -45,6 +61,7 @@ class Ops(Enum):
     CHANNEL = 2
     MEASURE = 3
     BARRIER = 4
+    RESET = 5
 
 
 class Declarations(Enum):
@@ -77,15 +94,17 @@ def unpack(args):
 def flatten(*args):
     """Flattens nested lists consisting of Python lists or NestedList objects."""
     obj = unpack(args)
+
     if isinstance(obj, (list, tuple)):
         flat_list = []
         for item in obj:
             flat_list.extend(flatten(item))
         return flat_list
-    elif isinstance(obj, ParsedList):
+
+    if isinstance(obj, ParsedList):
         return flatten(obj.list)
-    else:
-        return [obj]
+
+    return [obj]
 
 
 def format_wires(wire_id_list):
@@ -93,15 +112,18 @@ def format_wires(wire_id_list):
     if len(wire_id_list) == 1:
         # <id>
         return str(wire_id_list[0])
-    elif len(wire_id_list) == 2:
+
+    if len(wire_id_list) == 2:
         # <id> [<nninteger>]
         return "{}[{}]".format(*wire_id_list)
+
+    raise ValueError(f"Unexpected size of wire list: {len(wire_id_list)}")
 
 
 class ArithmeticOperation:
     """Lightweight class for representing arithmetic operations appearing within the grammar."""
 
-    def __new__(cls, func, *exps):
+    def __new__(cls, func, *exps):  # pylint:disable=unused-argument
         if len(exps) == 1:
             return super().__new__(UnaryOperation)
 
@@ -155,9 +177,6 @@ class ArithmeticOperation:
 class UnaryOperation(ArithmeticOperation):
     """Lightweight class for representing unary operations appearing within the grammar."""
 
-    def __init__(self, func, exp):
-        super().__init__(func, exp)
-
     def __repr__(self):
         if self.func == "neg":
             return "-{}".format(self.args[0])
@@ -167,9 +186,6 @@ class UnaryOperation(ArithmeticOperation):
 
 class BinaryOperation(ArithmeticOperation):
     """Lightweight class for representing binary operations appearing within the grammar."""
-
-    def __init__(self, func, exp1, exp2):
-        super().__init__(func, exp1, exp2)
 
     def __repr__(self):
         if self.func == "add":
@@ -241,10 +257,12 @@ class TensorOp:
 
     @property
     def params(self):
+        """A flat list containing all the parameters of constituent operators"""
         return self._params
 
     @property
     def wires(self):
+        """A flat list containing the wires of all constituent operators"""
         return self._wires
 
     def __repr__(self):
@@ -317,6 +335,10 @@ class Declaration:
         self.goplist = []
 
     def declaration_str(self):
+        """The serialized declaration definition. Note that this only includes
+        the name of the declaration and the declaration keyword arguments; for the
+        full serialization (including constituent operators) please see ``__repr__``.
+        """
         return "{} declaration, kwargs={}".format(self.name, self.kwargs)
 
     def __repr__(self):

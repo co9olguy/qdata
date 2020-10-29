@@ -8,7 +8,7 @@ from lark import Lark, Transformer
 from .ir import (
     Barrier,
     ClassicalRegister,
-    ConditionalOp,
+    ConditionalOperation,
     Declaration,
     EqualityCondition,
     Gate,
@@ -124,7 +124,7 @@ class QASMToIRTransformer(Transformer):
             # if ( <id> == <nninteger> ) <qop>
             id_, intval, op = args[1:]
             cond = EqualityCondition(id_, intval)
-            stmt = ConditionalOp(cond, op)
+            stmt = ConditionalOperation(cond, op)
 
         elif args[0] == "barrier":
             # barrier <anylist>;

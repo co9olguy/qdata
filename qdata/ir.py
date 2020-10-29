@@ -138,7 +138,7 @@ class ArithmeticOperation:
         self.tuple = (func, *args)
 
     def __repr__(self):
-        return "ArithmeticOp(func={}, args={})".format(self.func, self.args)
+        return "ArithmeticOperation(func={}, args={})".format(self.func, self.args)
 
     def __add__(self, other):
         return BinaryOperation("add", self, other)
@@ -311,7 +311,7 @@ class EqualityCondition:
         return f"{self.id} == {self.integer}"
 
 
-class ConditionalOp:
+class ConditionalOperation:
     """Class for representing the classical conditional expression from the specification.
 
     For example, as appears in ``barrier q[0],q[1];``."""

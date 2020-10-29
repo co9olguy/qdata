@@ -2,14 +2,14 @@ import sys
 
 import pytest
 
-import parser
+from qdata.ir import *
 
 
 def test_instantiate_op(capsys):
     """Test that instantiating an operation works correctly"""
 
-    op = parser.Op('op', [], [0,1])
-    assert isinstance(op, parser.Op)
+    op = Operator('op', [], [0,1])
+    assert isinstance(op, Operator)
     assert op.name == "op"
     assert op.params == []
     assert op.wires == [0,1]
@@ -22,8 +22,8 @@ def test_instantiate_op(capsys):
 def test_instantiate_op_params(capsys):
     """Test that instantiating an operation works correctly"""
 
-    op = parser.Op('op', ['alpha', 'beta'], [0,1])
-    assert isinstance(op, parser.Op)
+    op = Operator('op', ['alpha', 'beta'], [0,1])
+    assert isinstance(op, Operator)
     assert op.name == "op"
     assert op.params == ['alpha', 'beta']
     assert op.wires == [0,1]
@@ -35,8 +35,8 @@ def test_instantiate_op_params(capsys):
 def test_instantiate_gate(capsys):
     """Test that instantiating a gate works correctly"""
 
-    op = parser.Gate('gate', [], [0, 1])
-    assert isinstance(op, (parser.Op, parser.Gate))
+    op = Gate('gate', [], [0, 1])
+    assert isinstance(op, (Operator, Gate))
     assert op.name == "gate"
     assert op.params == []
     assert op.wires == [0, 1]
@@ -49,8 +49,8 @@ def test_instantiate_gate(capsys):
 def test_instantiate_gate_params(capsys):
     """Test that instantiating a gate works correctly"""
 
-    op = parser.Gate('gate', ['alpha', 'beta'], [0, 1])
-    assert isinstance(op, (parser.Op, parser.Gate))
+    op = Gate('gate', ['alpha', 'beta'], [0, 1])
+    assert isinstance(op, (Operator, Gate))
     assert op.name == "gate"
     assert op.params == ['alpha', 'beta']
     assert op.wires == [0, 1]
@@ -62,8 +62,8 @@ def test_instantiate_gate_params(capsys):
 def test_instantiate_barrier(capsys):
     """Test that instantiating a barrier works correctly"""
 
-    op = parser.Barrier([0,1])
-    assert isinstance(op, (parser.Op, parser.Barrier))
+    op = Barrier([0,1])
+    assert isinstance(op, (Operator, Barrier))
     assert op.name == "barrier"
     assert op.params == []
     assert op.wires == [0, 1]
@@ -73,17 +73,17 @@ def test_instantiate_barrier(capsys):
 
     assert captured.out == "barrier 0,1;\n"
 
-all_possible_ops = [parser.Op('op', [], [0,1]),
-                    parser.Op('op', ['alpha', 'beta'], [0,1]),
-                    parser.Gate('gate', [], [0, 1]),
-                    parser.Gate('gate', ['alpha', 'beta'], [0, 1]),
-                    parser.Barrier([0,1])]
+all_possible_ops = [Operator('op', [], [0,1]),
+                    Operator('op', ['alpha', 'beta'], [0,1]),
+                    Gate('gate', [], [0, 1]),
+                    Gate('gate', ['alpha', 'beta'], [0, 1]),
+                    Barrier([0,1])]
 
 
 @pytest.mark.parametrize("op", all_possible_ops)
 def test_instantiate_cond_op(capsys, op):
     """Test that instantiating a barrier works correctly"""
-    cop = parser.ConditionalOp("c==1",op)
+    cop = ConditionalOperation("c==1",op)
     assert cop.condition == "c==1"
     assert cop.op == op
 

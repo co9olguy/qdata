@@ -305,7 +305,7 @@ class QASMToIRTransformer(Transformer):
 
         if args[0] == "reset":
             # reset <argument>;
-            wires = args[1]
+            wires = args[1].list
             return Op(Ops.RESET, name=args[0], params=[], wires=wires)
 
         if args[0] == "measure":

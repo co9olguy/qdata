@@ -129,7 +129,7 @@ class QASMToIRTransformer(Transformer):
         elif args[0] == "barrier":
             # barrier <anylist>;
             anylist = args[1]
-            stmt = Barrier(wires=anylist.list)
+            stmt = Barrier(wires=flatten(anylist.list))
 
         elif args[0] == "include":
             filename = args[1][1:-1]

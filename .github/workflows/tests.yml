@@ -36,7 +36,7 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          pip install wheel pytest pytest-cov pytest-mock --upgrade
+          pip install wheel pytest pytest-cov pytest-mock numpy --upgrade
 
       - name: Run tests
         run: python -m pytest tests --cov=qdata --cov-report=term-missing --tb=native

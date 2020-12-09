@@ -28,33 +28,31 @@ def fix_braces(qasm_lines):
     """Helper function to place braces on separate lines"""
     form_lines = []
     for line_1 in qasm_lines:
-
-        if re.search(r"{\s*}", line_1):
+        # if a line contains empty braces, format them separately
+        match = re.search(r"{\s*}", line_1)
+        if match:
+            form_lines.append(line_1.replace(match.group(), "{ }"))
             continue
 
+        # split at "{" and re-add them as separate list-elements
         res = line_1.split("{")
         next_qasm_lines = [clean(em) for el in list(zip(["{"]*len(res), res)) for em in el if clean(em)][1:]
         for line_2 in next_qasm_lines:
+            # split the new list at "}" and re-add them as separate list-elements
             res = line_2.split("}")
             lines = [clean(em) for el in list(zip(["}"]*len(res), res)) for em in el if clean(em)][1:]
             form_lines.extend(lines)
 
-    delete_list = []
+    #asdad
     tab = False
     for i in range(1, len(form_lines) - 1):
         if tab and form_lines[i] != "}":
             form_lines[i] = "    " + form_lines[i]
 
-        if form_lines[i] == "{" and form_lines[i+1] == "}":
-            form_lines[i-1] += " { }"
-            delete_list.append(i)
-        elif form_lines[i] == "{":
+        if form_lines[i] == "{":
             tab = True
         elif form_lines[i] == "}":
             tab = False
-
-    for i in delete_list:
-        del form_lines[i], form_lines[i]
 
     return form_lines
 
@@ -62,10 +60,11 @@ def fix_braces(qasm_lines):
 def fix_ifs(line):
     """Helper function to format if-statements correctly"""
     p = re.compile(r"(if)\s*\(\s*(\w+)\s*(==|!=|>=|<=|<|>)\s*(\w+)\s*\)")
-    m = p.match(line)
-    if m:
-        ifstring = m.group(1) + " (" + m.group(2) + " " + m.group(3) + " " + m.group(4) + ")"
-        return ifstring + line[m.span()[1]:]
+    match = p.match(line)
+    # if an if-string is found, "build up" a correctly formatted string
+    if match:
+        ifstring = match.group(1) + " (" + match.group(2) + " " + match.group(3) + " " + match.group(4) + ")"
+        return ifstring + line[match.span()[1]:]
     return line
 
 
@@ -77,10 +76,12 @@ def fix_spaces(line):
     return clean(line)
 
 
+# for variable names that are used by Python, and cannot be used as SymPy symbols
 invalid_var_names = ["lambda"]
 def fix_math_expr(line):
     """Helper function to format math expressions correctly"""
 
+    # remove the if-parts from the string (doens't support maths in if-statments)
     if "if" in line:
         line = re.split(r"if\s*\(.+?\)\s*", line)[-1]
 
@@ -166,8 +167,8 @@ def test_deserialize_and_serialize(fname):
     ("h q[0];", "h q[0];"),
     ("post q[0];", "post q[0];"),
     ("measure q[0] -> c[0];", "measure q[0] -> c[0];"),
-    ("reset q[0];", "reset q[0];"),  # fails due to output being `reset q,0;`
-    ("if(c==3) u1(pi/2+pi/4) q[2];", "if (c == 3) u1(3*pi/4) q[2];")  # note the different args and whitespace
+    ("reset q[0];", "reset q[0];"),
+    ("if(c==3) u1(pi/2+pi/4) q[2];", "if (c == 3) u1(3*pi/4) q[2];"),  # note the different args and whitespace
 ])
 def test_lines(stmt, expected_stmt):
     """TODO"""

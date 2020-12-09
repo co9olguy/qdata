@@ -1,5 +1,6 @@
 import os
 import re
+import sympy
 import pytest
 import numpy as np
 
@@ -27,6 +28,10 @@ def fix_braces(qasm_lines):
     """Helper function to place braces on separate lines"""
     form_lines = []
     for line_1 in qasm_lines:
+
+        if re.search(r"{\s*}", line_1):
+            continue
+
         res = line_1.split("{")
         next_qasm_lines = [clean(em) for el in list(zip(["{"]*len(res), res)) for em in el if clean(em)][1:]
         for line_2 in next_qasm_lines:
@@ -64,6 +69,48 @@ def fix_ifs(line):
     return line
 
 
+def fix_spaces(line):
+    """Helper function to format spaces before/after paranthesis and after commas correctly"""
+    line = ",".join(re.split(r"\s*,\s*", line))
+    line = "(".join(re.split(r"\s*\(\s*", line))
+    line = ") ".join(re.split(r"\s*\)\s*", line))
+    return clean(line)
+
+
+invalid_var_names = ["lambda"]
+def fix_math_expr(line):
+    """Helper function to format math expressions correctly"""
+
+    if "if" in line:
+        line = re.split(r"if\s*\(.+?\)\s*", line)[-1]
+
+    p = re.compile(r"\(.+\)")
+    res = p.search(line)
+    invalid_var_names_list = []
+    if res and "=" not in res.group() and res.group() not in ["False", "True"]:
+        p_match = res.group()
+        free_params = re.findall(r"[a-zA-Z]\w*", p_match)
+
+        for i, p in enumerate(free_params):
+            if p in invalid_var_names:
+                free_params[i] = p + "_var"
+                p_match = p_match.replace(p, free_params[i])
+                invalid_var_names_list.append((p, free_params[i]))
+
+        sympy.var(free_params)
+
+        p_replace = p_match
+        if p_replace[0] == "(":
+            p_replace = p_replace[1:-1]
+        p_replace = ",".join([str(eval(r)) for r in p_replace.split(",")])
+        for var in invalid_var_names_list:
+            p_replace = p_replace.replace(var[1], var[0])
+            p_match = p_match.replace(var[1], var[0])
+        line = line.replace(p_match, "(" + p_replace + ")")
+
+    return line
+
+
 def clean(qasm_line):
     """Helper function to strip out comments, whitespace, and empty braces from a line from a qasm file."""
     line = qasm_line.split("//")[0]  # comments
@@ -75,8 +122,10 @@ def format_code(qasm_lines):
     """Format the code"""
     formatted_qasm_lines = [clean(line) for line in qasm_lines if clean(line)]
     formatted_qasm_lines = split_at_semicol(formatted_qasm_lines)
-    formatted_qasm_lines = fix_braces(formatted_qasm_lines)
+    formatted_qasm_lines = [fix_spaces(line) for line in formatted_qasm_lines]
     formatted_qasm_lines = [fix_ifs(line) for line in formatted_qasm_lines]
+    formatted_qasm_lines = fix_braces(formatted_qasm_lines)
+    formatted_qasm_lines = [fix_math_expr(line) for line in formatted_qasm_lines]
 
     return formatted_qasm_lines
 
@@ -121,6 +170,7 @@ def test_deserialize_and_serialize(fname):
     ("if(c==3) u1(pi/2+pi/4) q[2];", "if (c == 3) u1(3*pi/4) q[2];")  # note the different args and whitespace
 ])
 def test_lines(stmt, expected_stmt):
+    """TODO"""
     tree = parser.qasm_parser.parse(stmt)
     tree = parser.QASMToIRTransformer().transform(tree)
     serialized_stmt = tree.serialize()

@@ -304,7 +304,7 @@ class QASMToIRTransformer(Transformer):
             return args[0]
         if args[0] == "reset":
             # reset <argument>;
-            # `Op` takes a list of wires while `args[1]`` is of type `['q', 0]``
+            # `Op` takes a list of wires while `args[1]` is of type `['q', 0]`
             wires = [format_wires(args[1])]
             return Op(Ops.RESET, name=args[0], params=[], wires=wires)
 

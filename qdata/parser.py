@@ -129,7 +129,7 @@ class QASMToIRTransformer(Transformer):
         elif args[0] == "barrier":
             # barrier <anylist>;
             anylist = args[1]
-            stmt = Barrier(wires=anylist.list)
+            stmt = Barrier(wires=flatten(anylist.list))
 
         elif args[0] == "include":
             filename = args[1][1:-1]
@@ -302,14 +302,15 @@ class QASMToIRTransformer(Transformer):
         if len(args) == 1:
             # <uop>
             return args[0]
-
         if args[0] == "reset":
             # reset <argument>;
-            wires = args[1]
+            # `Op` takes a list of wires while `args[1]` is of type `['q', 0]`
+            wires = [format_wires(args[1])]
             return Op(Ops.RESET, name=args[0], params=[], wires=wires)
 
         if args[0] == "measure":
             wires = args[1:]
+            # `Measure` calls `format_wires`, so no need to format here
             return Measure(wires=wires)
 
         # TODO: Check the operator kind this 'catch-all' return

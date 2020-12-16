@@ -389,6 +389,9 @@ class GateDeclaration(Declaration):
         super().__init__(decl_type=Declarations.GATE, op=op)
 
     def declaration_str(self):
+        if not self.goplist:
+            return f"gate {self.kwargs['op']}"[:-1] + " { }"
+
         return f"gate {self.kwargs['op']}"[:-1]
 
 

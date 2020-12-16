@@ -47,7 +47,7 @@ def split_with_delim(line, delim):
         list: all substrings and delimiters (as separate elements)
     """
     if line == delim:
-        return line
+        return [line]
 
     split_list = []
     last_end = 0
@@ -258,7 +258,7 @@ def test_deserialize_and_serialize(fname):
     ("if(c==3) u1(pi/2+pi/4) q[2];", "if (c == 3) u1(3*pi/4) q[2];"),  # note the different args and whitespace
 ])
 def test_lines(stmt, expected_stmt):
-    """TODO"""
+    """Test single statements/lines"""
     tree = parser.qasm_parser.parse(stmt)
     tree = parser.QASMToIRTransformer().transform(tree)
     serialized_stmt = tree.serialize()

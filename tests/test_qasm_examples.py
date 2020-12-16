@@ -68,7 +68,7 @@ def split_with_delim(line, delim):
 def fix_braces(qasm_lines):
     """Helper function to place braces on separate lines.
 
-    Assuming there are only closed braces (e.g. no single braces without a
+    Assuming there are only matching braces (e.g. no single braces without a
     partner), each brace will be split up and added as a separate element
     in the returned list. For example, ``["gate { a; }"]`` will become
     ``["gate", "{", "a;", "}"]``.

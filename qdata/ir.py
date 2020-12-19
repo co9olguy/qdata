@@ -234,7 +234,7 @@ class Op:
         return f"{self.name} {','.join(str(w) for w in self.wires)};"
 
     def __repr__(self):
-        kind = self.kind.name.title() if not self.kind.name=="OPERATOR" else "Quantum"
+        kind = self.kind.name.title() if not self.kind.name == "OPERATOR" else "Quantum"
         return f"<{kind}Operation: name={self.name}, wires={self.wires}>"
 
 
@@ -316,6 +316,7 @@ class Measure(Op):
         wires = [format_wires(w) for w in self.wires]
         return f"<MeasureOperation: wires={wires}>"
 
+
 class Barrier(Op):
     """Class for representing the 'barrier' keyword."""
 
@@ -325,6 +326,7 @@ class Barrier(Op):
     def __repr__(self):
         wires = [format_wires(w) for w in self.wires]
         return f"<BarrierOperation: wires={wires}>"
+
 
 class EqualityCondition:
     """Class for representing the classical equality expression from the specification.
@@ -340,7 +342,7 @@ class EqualityCondition:
         return f"{self.id} == {self.integer}"
 
     def __repr__(self):
-        return f'<EqualityCondition: {self.id}=={self.integer}>'
+        return f"<EqualityCondition: {self.id}=={self.integer}>"
 
 
 class ConditionalOp:
@@ -356,7 +358,7 @@ class ConditionalOp:
         return f"if ({self.condition}) {self.op}"
 
     def __repr__(self):
-        return f'<ConditionalOperation: {self.condition}, op={self.op.name}, wires={self.op.wires}>'
+        return f"<ConditionalOperation: {self.condition}, op={self.op.name}, wires={self.op.wires}>"
 
 
 class Declaration:
@@ -454,4 +456,6 @@ class OperatorDeclaration(Declaration):
         return f"operator {self.kwargs['op']}"[:-1]
 
     def __repr__(self):
-        return f"<OperatorDeclaration: name={self.kwargs['op'].name}, wires={self.kwargs['op'].wires}>"
+        return (
+            f"<OperatorDeclaration: name={self.kwargs['op'].name}, wires={self.kwargs['op'].wires}>"
+        )

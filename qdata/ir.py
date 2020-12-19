@@ -35,7 +35,7 @@ class QasmProgram:
                 else:
                     output.append(f'include "{stmt.filename}";')
             else:
-                output.append(stmt.__repr__())
+                output.append(str(stmt))
 
         return "\n".join(output)
 
@@ -81,8 +81,11 @@ class ParsedList:
         self.name = name
         self.list = list_
 
-    def __repr__(self):
+    def __str__(self):
         return "<{}: {}>".format(self.name, self.list)
+
+    def __repr__(self):
+        return f"<ParsedList: name={self.name}, size={len(self.list)}>"
 
 
 def unpack(args):
@@ -137,8 +140,11 @@ class ArithmeticOperation:
         self.args = args
         self.tuple = (func, *args)
 
-    def __repr__(self):
+    def __str__(self):
         return "ArithmeticOp(func={}, args={})".format(self.func, self.args)
+
+    def __repr__(self):
+        return f"<ArithmeticOperation: func={self.func}>"
 
     def __add__(self, other):
         return BinaryOperation("add", self, other)
@@ -177,17 +183,20 @@ class ArithmeticOperation:
 class UnaryOperation(ArithmeticOperation):
     """Lightweight class for representing unary operations appearing within the grammar."""
 
-    def __repr__(self):
+    def __str__(self):
         if self.func == "neg":
             return "-{}".format(self.args[0])
 
         return "{}({})".format(*self.tuple)
 
+    def __repr__(self):
+        return f"<UnaryOperation: func={self.func}>"
+
 
 class BinaryOperation(ArithmeticOperation):
     """Lightweight class for representing binary operations appearing within the grammar."""
 
-    def __repr__(self):
+    def __str__(self):
         if self.func == "add":
             return "{} + {}".format(*self.args)
 
@@ -205,6 +214,9 @@ class BinaryOperation(ArithmeticOperation):
 
         return "{}({}, {})".format(*self.tuple)
 
+    def __repr__(self):
+        return f"<BinaryOperation: op={self.func}>"
+
 
 class Op:
     """Class for representing quantum operations found in the grammar."""
@@ -215,11 +227,15 @@ class Op:
         self.params = params
         self.wires = wires
 
-    def __repr__(self):
+    def __str__(self):
         if not all(p is None for p in self.params):
             return f"{self.name}({','.join(str(p) for p in self.params)}) {','.join(str(w) for w in self.wires)};"
 
         return f"{self.name} {','.join(str(w) for w in self.wires)};"
+
+    def __repr__(self):
+        kind = self.kind.name.title() if not self.kind.name=="OPERATOR" else "Quantum"
+        return f"<{kind}Operation: name={self.name}, wires={self.wires}>"
 
 
 class Gate(Op):
@@ -265,8 +281,12 @@ class TensorOp:
         """A flat list containing the wires of all constituent operators."""
         return self._wires
 
-    def __repr__(self):
+    def __str__(self):
         return ", ".join(str(o).replace(";", "") for o in self.ops) + ";"
+
+    def __repr__(self):
+        ops = [op.name for op in self.ops]
+        return f"<TensorOperation: ops={ops}, wires={self.wires}>"
 
 
 class Term:
@@ -276,8 +296,11 @@ class Term:
         self.coeff = coeff
         self.op = op
 
-    def __repr__(self):
+    def __str__(self):
         return "{} {}".format(self.coeff, self.op)
+
+    def __repr__(self):
+        return f"<Term: coeff={self.coeff}, op={self.op.name}, wires={self.op.wires}>"
 
 
 class Measure(Op):
@@ -286,9 +309,12 @@ class Measure(Op):
     def __init__(self, wires):
         super().__init__(Ops.MEASURE, "measure", params=[], wires=wires)
 
-    def __repr__(self):
+    def __str__(self):
         return f"{self.name} {format_wires(self.wires[0])} -> {format_wires(self.wires[1])};"
 
+    def __repr__(self):
+        wires = [format_wires(w) for w in self.wires]
+        return f"<MeasureOperation: wires={wires}>"
 
 class Barrier(Op):
     """Class for representing the 'barrier' keyword."""
@@ -296,6 +322,9 @@ class Barrier(Op):
     def __init__(self, wires):
         super().__init__(Ops.BARRIER, "barrier", params=[], wires=wires)
 
+    def __repr__(self):
+        wires = [format_wires(w) for w in self.wires]
+        return f"<BarrierOperation: wires={wires}>"
 
 class EqualityCondition:
     """Class for representing the classical equality expression from the specification.
@@ -307,8 +336,11 @@ class EqualityCondition:
         self.id = id_
         self.integer = integer
 
-    def __repr__(self):
+    def __str__(self):
         return f"{self.id} == {self.integer}"
+
+    def __repr__(self):
+        return f'<EqualityCondition: {self.id}=={self.integer}>'
 
 
 class ConditionalOp:
@@ -320,8 +352,11 @@ class ConditionalOp:
         self.condition = condition
         self.op = op
 
-    def __repr__(self):
+    def __str__(self):
         return f"if ({self.condition}) {self.op}"
+
+    def __repr__(self):
+        return f'<ConditionalOperation: {self.condition}, op={self.op.name}, wires={self.op.wires}>'
 
 
 class Declaration:
@@ -337,11 +372,11 @@ class Declaration:
     def declaration_str(self):
         """The serialized declaration. Note that this only includes
         the name of the declaration and the declaration keyword arguments; for the
-        full serialization (including constituent operators) please see ``__repr__``.
+        full serialization (including constituent operators) please see ``__str__``.
         """
         return "{} declaration, kwargs={}".format(self.name, self.kwargs)
 
-    def __repr__(self):
+    def __str__(self):
         if self.opaque or not self.goplist:
             return self.declaration_str()
 
@@ -355,6 +390,9 @@ class Declaration:
         output.append("}")
         return "\n".join(output)
 
+    def __repr__(self):
+        return f"<Declaration: name={self.name}>"
+
 
 class ClassicalRegister(Declaration):
     """Class for representing the declaration of classical registers.
@@ -364,8 +402,11 @@ class ClassicalRegister(Declaration):
     def __init__(self, name, size):
         super().__init__(decl_type=Declarations.CREG, id_=name, size=size)
 
-    def __repr__(self):
+    def __str__(self):
         return f"creg {self.kwargs['id_']}[{self.kwargs['size']}];"
+
+    def __repr__(self):
+        return f"<ClassicalRegister: size={self.kwargs['size']}>"
 
 
 class QuantumRegister(Declaration):
@@ -376,8 +417,11 @@ class QuantumRegister(Declaration):
     def __init__(self, name, size):
         super().__init__(decl_type=Declarations.QREG, id_=name, size=size)
 
-    def __repr__(self):
+    def __str__(self):
         return f"qreg {self.kwargs['id_']}[{self.kwargs['size']}];"
+
+    def __repr__(self):
+        return f"<QuantumRegister: size={self.kwargs['size']}>"
 
 
 class GateDeclaration(Declaration):
@@ -394,6 +438,9 @@ class GateDeclaration(Declaration):
 
         return f"gate {self.kwargs['op']}"[:-1]
 
+    def __repr__(self):
+        return f"<GateDeclaration: name={self.kwargs['op'].name}, wires={self.kwargs['op'].wires}>"
+
 
 class OperatorDeclaration(Declaration):
     """Class for representing the declaration of quantum gates.
@@ -405,3 +452,6 @@ class OperatorDeclaration(Declaration):
 
     def declaration_str(self):
         return f"operator {self.kwargs['op']}"[:-1]
+
+    def __repr__(self):
+        return f"<OperatorDeclaration: name={self.kwargs['op'].name}, wires={self.kwargs['op'].wires}>"
